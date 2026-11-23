@@ -20,7 +20,7 @@ struct CookingView: View {
             }
         }
         .padding(.top, 6)
-        .task {
+        .task(id: store.cooking != nil) {
             await cookLoop()
         }
     }

@@ -25,7 +25,7 @@ struct GatheringGameView: View {
             }
         }
         .padding(.top, 6)
-        .task {
+        .task(id: store.gathering != nil) {
             await gameLoop()
         }
     }

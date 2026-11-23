@@ -404,6 +404,35 @@ check("모든 레시피 재료가 실제 재료", all(
     set(v[1]) <= {"raspberry", "acorn", "honeyMushroom", "moonHerb"} for v in recipes.values()))
 check("축제 케이크 존재", "starlight-cake" in recipes)
 
+min_chapters = re.findall(r"minChapter: \.(\w+)", recipe_text)
+check("레시피 등장 장이 유효", bool(min_chapters) and set(min_chapters) <= set(chapters), str(set(min_chapters)))
+
+# 이웃의 최애/호불호 레시피가 실제 레시피를 가리키는지
+character_text = read(CORE_DIR / "Models/ForestCharacter.swift")
+
+def switch_block(prop: str) -> str:
+    match = re.search(prop + r".*?\{\s*switch self \{(.*?)\n    \}", character_text, flags=re.S)
+    return match.group(1) if match else ""
+
+favorite_map = dict(re.findall(r"case \.(\w+): return \"([^\"]+)\"", switch_block(r"var favoriteRecipeID: String")))
+liked_map = {c: re.findall(r'"([^"]+)"', v) for c, v in
+             re.findall(r"case \.(\w+): return \[([^\]]*)\]", switch_block(r"var likedRecipeIDs: \[String\]"))}
+disliked_map = {c: re.findall(r'"([^"]+)"', v) for c, v in
+                re.findall(r"case \.(\w+): return \[([^\]]*)\]", switch_block(r"var dislikedRecipeIDs: \[String\]"))}
+wish_block = switch_block(r"var wish: String")
+
+check("이웃 4명 최애 요리 지정", set(favorite_map) == set(characters), str(favorite_map))
+check("최애 요리가 실제 레시피", all(v in recipes for v in favorite_map.values()), str(favorite_map))
+check("최애 요리가 겹치지 않음", len(set(favorite_map.values())) == len(favorite_map), str(favorite_map))
+check("좋아하는/싫어하는 요리가 실제 레시피",
+      all(v in recipes for values in liked_map.values() for v in values)
+      and all(v in recipes for values in disliked_map.values() for v in values),
+      f"{liked_map} / {disliked_map}")
+check("호불호가 최애와 겹치지 않음",
+      all(favorite_map[c] not in liked_map.get(c, []) + disliked_map.get(c, []) for c in characters),
+      str(favorite_map))
+check("이웃 모두 소원 문장 있음", len(re.findall(r"return \"[^\"]+\"", wish_block)) >= len(characters), wish_block[:80])
+
 # 대본
 scene_blocks = re.split(r"(?=StoryScene\()", story_text)[1:]
 scenes = []

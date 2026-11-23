@@ -53,8 +53,8 @@ public enum CharacterID: String, CaseIterable, Codable, Identifiable, Sendable {
         switch self {
         case .tori: return ["forest-mushroom-pie", "grandma-porridge"]
         case .songi: return ["forest-mushroom-pie", "grandma-porridge"]
-        case .mong: return ["grandma-porridge", "moonlight-tea"]
-        case .rubi: return ["starlight-cake", "raspberry-jam"]
+        case .mong: return ["grandma-porridge"]
+        case .rubi: return ["starlight-cake"]
         }
     }
 
