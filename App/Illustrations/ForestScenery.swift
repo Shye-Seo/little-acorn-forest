@@ -223,9 +223,9 @@ struct ForestMapCanvas: View {
             let anchors = ForestLocation.allCases.map { $0.mapAnchor }
             var path = Path()
             if let first = anchors.first {
-                path.move(to: CGPoint(x: w * first.x, y: h * first.y))
+                path.move(to: CGPoint(x: w * CGFloat(first.x), y: h * CGFloat(first.y)))
                 for anchor in anchors.dropFirst() {
-                    path.addLine(to: CGPoint(x: w * anchor.x, y: h * anchor.y))
+                    path.addLine(to: CGPoint(x: w * CGFloat(anchor.x), y: h * CGFloat(anchor.y)))
                 }
             }
             context.stroke(
