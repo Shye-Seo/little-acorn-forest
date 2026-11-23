@@ -14,14 +14,14 @@ struct TitleView: View {
                 Spacer(minLength: 8)
 
                 VStack(spacing: 6) {
-                    Text("도토리 숲의")
+                    Text("달빛 잼")
                         .font(.story(17, weight: .medium))
                         .tracking(3)
                         .foregroundStyle(ForestPalette.inkSoft)
-                    Text("작은 이야기")
+                    Text("항아리")
                         .font(.story(40, weight: .bold))
                         .foregroundStyle(ForestPalette.ink)
-                    Text("Little Acorn Forest")
+                    Text("Moonlight Jam Jar")
                         .font(.label(11))
                         .tracking(2)
                         .foregroundStyle(ForestPalette.sage)

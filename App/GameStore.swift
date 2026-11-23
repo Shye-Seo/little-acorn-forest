@@ -61,7 +61,7 @@ final class GameStore: ObservableObject {
     }
 
     var chapterTitle: String {
-        engine.currentChapter?.title ?? "도토리 숲의 작은 이야기"
+        engine.currentChapter?.title ?? "달빛 잼 항아리"
     }
 
     var chapterSubtitle: String {

@@ -1,6 +1,6 @@
 name: LittleAcornForest
 options:
-  bundleIdPrefix: com.quoguri.littleacornforest
+  bundleIdPrefix: com.quoguri.moonlightjamjar
   deploymentTarget:
     iOS: "17.0"
   xcodeVersion: "15.4"
@@ -26,7 +26,7 @@ targets:
     info:
       path: App/Info.plist
       properties:
-        CFBundleDisplayName: "도토리 숲"
+        CFBundleDisplayName: "달빛 잼 항아리"
         CFBundleShortVersionString: "1.0.0"
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
@@ -35,7 +35,7 @@ targets:
         ITSAppUsesNonExemptEncryption: false
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.quoguri.littleacornforest.app
+        PRODUCT_BUNDLE_IDENTIFIER: com.quoguri.moonlightjamjar.app
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.games
         SWIFT_EMIT_LOC_STRINGS: YES
   LittleAcornForestTests:
@@ -48,7 +48,7 @@ targets:
       - package: AcornForestCore
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.quoguri.littleacornforest.app.tests
+        PRODUCT_BUNDLE_IDENTIFIER: com.quoguri.moonlightjamjar.app.tests
 schemes:
   LittleAcornForest:
     build:

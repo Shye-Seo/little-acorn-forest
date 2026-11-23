@@ -1,4 +1,4 @@
-# 도토리 숲의 작은 이야기 (Little Acorn Forest)
+# 달빛 잼 항아리 (Moonlight Jam Jar)
 
 > 할머니의 오두막을 물려받은 보리가, 숲속 이웃 네 명의 소원을 모아 별빛 축제를 여는 이야기.
 
@@ -18,11 +18,13 @@ iOS 17+ · SwiftUI · Swift 5.9 · XcodeGen · iPhone 세로 화면
 
 ## 세계관
 
-도토리 숲 외곽, 버스가 더는 가지 않는 길 끝에 할머니의 오두막이 있습니다. 할머니는 매년 보름밤에 **별빛 축제**를 열었습니다. 숲의 이웃 네 명이 각자 소원을 하나씩 내걸고, 그것이 한 식탁에 모이면 숲이 스스로 불을 밝힌다는 이야기입니다.
+달빛 숲 외곽, 버스가 더는 가지 않는 길 끝에 할머니의 오두막이 있습니다. 할머니는 매년 보름밤에 **별빛 축제**를 열었습니다. 숲의 이웃 네 명이 각자 소원을 하나씩 내걸고, 그것이 한 식탁에 모이면 숲이 스스로 불을 밝힌다는 이야기입니다.
 
 마지막 축제는 아무도 오지 않았습니다. 할머니가 떠난 뒤, 오두막에는 수첩 한 권과 누렇게 바랜 초대장만 남았습니다. 도시에서 내려온 보리는 그 수첩을 펼치고, 이번 축제는 자기가 모아 보기로 합니다.
 
 이 게임의 목표는 싸우거나 이기는 것이 아니라, **네 사람의 소원을 들을 만큼 가까워지는 것**입니다.
+
+제목 『달빛 잼 항아리』는 보름밤마다 잼을 담그던 할머니의 부엌을 가리키는 이름입니다. 게임 안에서 산딸기 잼과 달빛 꿀차를 처음 만들면, 그 부엌의 레시피가 일기장에 한 칸씩 남습니다.
 
 ## 등장인물
 
@@ -154,8 +156,8 @@ little-acorn-forest/
 
 | 항목 | 값 |
 | --- | --- |
-| 앱 이름 | 도토리 숲 (Little Acorn Forest) |
-| Bundle ID | `com.quoguri.littleacornforest.app` |
+| 앱 이름 | 달빛 잼 항아리 (Moonlight Jam Jar) |
+| Bundle ID | `com.quoguri.moonlightjamjar.app` |
 | 배포 타깃 | iOS 17.0 |
 | 기기 | iPhone 전용, 세로 고정 |
 | Swift | 5.9 |
@@ -170,6 +172,8 @@ cd little-acorn-forest
 xcodegen generate
 open LittleAcornForest.xcodeproj
 ```
+
+저장소와 Xcode 타깃 이름(`little-acorn-forest`, `LittleAcornForest`)은 처음 만들 때의 이름을 그대로 쓰고 있고, 앱 아이콘 아래에 보이는 이름만 『달빛 잼 항아리』입니다.
 
 1. Xcode 왼쪽에서 `LittleAcornForest` 타깃 → **Signing & Capabilities** → Team을 본인 Apple ID로 선택합니다.
 2. 시뮬레이터(iPhone 15 이상) 또는 USB로 연결한 아이폰을 고르고 `⌘R`로 실행합니다.
@@ -193,7 +197,7 @@ python3 scripts/verify_project.py
 
 ## 저장 파일
 
-- 위치: `UserDefaults` 키 `little-acorn-forest.save.v1`
+- 위치: `UserDefaults` 키 `little-acorn-forest.save.v1` (초기 이름의 키를 그대로 씁니다. 이미 기기에 남아 있는 저장 파일과 호환되도록 바꾸지 않았습니다.)
 - 형식: `SaveFile { formatVersion, savedAt, state }` → JSON(ISO8601 날짜)
 - `state`에 들어가는 것: 챕터 상태, 호감도·선물 횟수, 바구니, 만들어 둔 요리(접시 수·최고 완성도), 일기장, 선택지 깃발, 플레이 통계, 현재 장면 위치
 - 손상된 데이터를 읽으면 `SaveError.corrupted`로 떨어지고, 앱은 새 이야기로 시작할 수 있습니다(기존 저장은 덮어쓰지 않음).

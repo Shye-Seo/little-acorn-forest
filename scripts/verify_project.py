@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-도토리 숲 프로젝트 검증 스크립트.
+달빛 잼 항아리 프로젝트 검증 스크립트.
 
 이 환경에는 Swift 툴체인이 없어서 `swift test`를 돌릴 수 없다. 대신 두 층으로 검증한다.
 
@@ -312,7 +312,7 @@ if isinstance(project, dict):
     app_target = targets.get("LittleAcornForest", {})
     test_target = targets.get("LittleAcornForestTests", {})
     bundle = app_target.get("settings", {}).get("base", {}).get("PRODUCT_BUNDLE_IDENTIFIER")
-    check("Bundle ID 고정", bundle == "com.quoguri.littleacornforest.app", str(bundle))
+    check("Bundle ID 고정", bundle == "com.quoguri.moonlightjamjar.app", str(bundle))
     deployment = project.get("options", {}).get("deploymentTarget", {}).get("iOS")
     check("iOS 17.0 배포 타깃", str(deployment) == "17.0", str(deployment))
     swift_version = project.get("settings", {}).get("base", {}).get("SWIFT_VERSION")
@@ -328,7 +328,8 @@ if isinstance(project, dict):
     info_props = app_target.get("info", {}).get("properties", {})
     orientations = info_props.get("UISupportedInterfaceOrientations", [])
     check("세로 고정 레이아웃", orientations == ["UIInterfaceOrientationPortrait"], str(orientations))
-    check("앱 표시 이름", bool(info_props.get("CFBundleDisplayName")), str(info_props.get("CFBundleDisplayName")))
+    check("앱 표시 이름", info_props.get("CFBundleDisplayName") == "달빛 잼 항아리",
+          str(info_props.get("CFBundleDisplayName")))
 
     package_file = ROOT / "Packages/AcornForestCore/Package.swift"
     package_text = read(package_file)
@@ -682,7 +683,8 @@ if readme_path.exists():
         ("실행 방법", ["xcodegen", "open LittleAcornForest.xcodeproj"]),
         ("캐릭터 이름", ["토리", "송이", "몽", "루비", "보리"]),
         ("요리 이름", ["도토리 파이", "산딸기 잼", "꿀버섯 수프", "달빛 꿀차"]),
-        ("번들 ID", ["com.quoguri.littleacornforest.app"]),
+        ("번들 ID", ["com.quoguri.moonlightjamjar.app"]),
+        ("앱 이름", ["달빛 잼 항아리", "Moonlight Jam Jar"]),
     ]
     for label, needles in required:
         missing = [n for n in needles if n not in readme]
@@ -697,7 +699,7 @@ else:
 
 passed = sum(1 for _, ok, _ in results if ok)
 total = len(results)
-print(f"도토리 숲 검증: {passed}/{total} 통과\n")
+print(f"달빛 잼 항아리 검증: {passed}/{total} 통과\n")
 for name, ok, detail in results:
     mark = "PASS" if ok else "FAIL"
     line = f"[{mark}] {name}"
