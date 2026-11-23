@@ -1,14 +1,14 @@
 import Foundation
 
-/// 솥단지에 넣는 재료 조합 하나가 만드는 요리.
+/// 솥단지에 넣는 재료 조합 하나가 만드는 잼.
 public struct Recipe: Identifiable, Codable, Hashable, Sendable {
     public let id: String
     public let name: String
     public let ingredients: [Ingredient]
     public let story: String
-    /// 요리의 온기(1~3). 3에 가까울수록 손이 많이 가는 요리다.
+    /// 잼의 온기(1~3). 3에 가까울수록 손이 많이 가는 잼이다.
     public let warmth: Int
-    /// 이 요리가 처음 등장하는 이야기 지점(UI 안내용).
+    /// 이 잼이 처음 등장하는 이야기 지점(UI 안내용).
     public let minChapter: StoryChapter
 
     public init(id: String,
@@ -35,6 +35,7 @@ public struct Recipe: Identifiable, Codable, Hashable, Sendable {
         ingredients.map(\.emoji).joined(separator: " ")
     }
 
+    /// 같은 재료를 두 번 쓰는 잼(새벽이슬 잼)만 false가 된다.
     public var hasDistinctIngredients: Bool {
         Set(ingredients).count == ingredients.count
     }
@@ -47,64 +48,64 @@ public enum RecipeBook {
 
     public static let all: [Recipe] = [
         Recipe(
-            id: "acorn-pie",
-            name: "도토리 파이",
-            ingredients: [.acorn, .raspberry],
-            story: "할머니가 도토리 가루를 체에 두 번 내리고, 산딸기를 설탕 대신 넣던 파이. 겉은 바삭하고 속은 부드럽다.",
-            warmth: 2,
+            id: "dawn-dew-jam",
+            name: "새벽이슬 잼",
+            ingredients: [.dewberry, .dewberry],
+            story: "이슬이 마르기 전에 딴 베리만 두 줌, 설탕 대신 달빛을 조금. 할머니 수첩의 첫 장에 ‘아무것도 더하지 않는 날의 잼’이라고 적혀 있다.",
+            warmth: 1,
             minChapter: .prologue
         ),
         Recipe(
-            id: "raspberry-jam",
-            name: "산딸기 잼",
-            ingredients: [.raspberry, .moonHerb],
-            story: "달빛허브 한 줌을 넣으면 잼이 은은한 보랏빛으로 물든다. 루비가 빵에 듬뿍 발라 먹는 걸 좋아한다.",
+            id: "firefly-sparkle-jam",
+            name: "반딧불 스파클 잼",
+            ingredients: [.dewberry, .fireflyNectar],
+            story: "꽃꿀을 마지막에 넣으면 잼 표면에서 작은 빛이 톡톡 터진다. 루비는 이 잼을 병째로 들고 숲을 한 바퀴 돈다.",
             warmth: 1,
             minChapter: .chapterOne
         ),
         Recipe(
-            id: "mushroom-soup",
-            name: "꿀버섯 수프",
-            ingredients: [.honeyMushroom, .acorn],
-            story: "도토리를 곱게 갈아 넣어 걸쭉하게 끓인 수프. 송이가 추운 날 제일 먼저 찾는 한 그릇이다.",
+            id: "starlight-mist-jam",
+            name: "별빛 안개 잼",
+            ingredients: [.dewberry, .starMossShroom],
+            story: "별이끼 버섯을 약한 불에 천천히 풀면 잼 위로 은빛 김이 오른다. 몽은 그 김 위에 책을 펼쳐 두고 읽는다.",
             warmth: 2,
             minChapter: .chapterOne
         ),
         Recipe(
-            id: "moonlight-tea",
-            name: "달빛 꿀차",
-            ingredients: [.moonHerb, .honeyMushroom],
-            story: "꿀버섯의 달콤한 즙에 달빛허브를 우린 차. 몽이 밤새 책을 읽을 때 옆에 두는 잔이다.",
-            warmth: 1,
+            id: "cloud-cotton-marmalade",
+            name: "구름솜 마멀레이드",
+            ingredients: [.fireflyNectar, .moonflakeSpice],
+            story: "달조각 향신료를 아주 조금 넣으면 꽃꿀이 구름처럼 부풀어 오른다. 숟가락으로 뜨면 솜사탕처럼 사르르 녹는다.",
+            warmth: 2,
             minChapter: .chapterOne
         ),
         Recipe(
-            id: "forest-mushroom-pie",
-            name: "숲속 버섯 파이",
-            ingredients: [.honeyMushroom, .acorn, .raspberry],
-            story: "버섯과 도토리, 산딸기를 한 판에 겹겹이 쌓은 파이. 셋이 모여야 숲의 맛이 난다고 한다.",
+            id: "meteor-berry-compote",
+            name: "유성우 베리 콩포트",
+            ingredients: [.dewberry, .starMossShroom, .moonflakeSpice],
+            story: "별이끼 버섯에서 터진 별가루가 베리 사이로 내려앉는다. 유성우가 지나간 밤에만 이 색이 나온다고 한다.",
             warmth: 3,
             minChapter: .chapterTwo
         ),
         Recipe(
-            id: "grandma-porridge",
-            name: "할머니의 도토리 죽",
-            ingredients: [.acorn, .honeyMushroom, .moonHerb],
-            story: "할머니가 아픈 이웃에게 늘 쑤어 주던 죽. 간이 세지 않아 밤에도 부담이 없다.",
+            id: "moonshadow-herb-jelly",
+            name: "달그림자 허브 젤리",
+            ingredients: [.starMossShroom, .moonflakeSpice],
+            story: "별이끼 버섯을 우린 물에 달조각 향신료를 풀어 굳힌 젤리. 향신료가 허브처럼 향기를 내서 ‘허브 젤리’라는 이름이 붙었다.",
             warmth: 2,
             minChapter: .chapterTwo
         ),
         Recipe(
-            id: "starlight-cake",
-            name: "별빛 축제 케이크",
-            ingredients: [.raspberry, .acorn, .moonHerb],
-            story: "축제 마지막에 올리는 케이크. 달빛허브를 촛불 대신 꽂으면 별이 내려앉은 것처럼 반짝인다.",
+            id: "golden-fullmoon-jam",
+            name: "황금 보름달 잼",
+            ingredients: [.fireflyNectar, .starMossShroom, .moonflakeSpice],
+            story: "세 가지 빛을 한 항아리에 담은 축제의 잼. 뚜껑을 열면 보름달이 항아리 안에서 한 번 떠오른다고 한다.",
             warmth: 3,
             minChapter: .chapterThree
         )
     ]
 
-    /// 재료를 순서 없이 늘어놓아 만든 조합 키. (예: "acorn+raspberry")
+    /// 재료를 순서 없이 늘어놓아 만든 조합 키. (예: "dewberry+fireflyNectar")
     public static func key(for ingredients: [Ingredient]) -> String {
         ingredients.map(\.rawValue).sorted().joined(separator: "+")
     }

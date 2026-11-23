@@ -9,8 +9,8 @@ final class ChapterProgressTests: XCTestCase {
         XCTAssertEqual(engine.status(of: .chapterTwo), .locked)
         XCTAssertEqual(engine.status(of: .chapterThree), .locked)
         XCTAssertEqual(engine.status(of: .epilogue), .locked)
-        XCTAssertEqual(engine.state.count(of: .acorn), 2)
-        XCTAssertEqual(engine.state.count(of: .raspberry), 1)
+        XCTAssertEqual(engine.state.count(of: .dewberry), 2)
+        XCTAssertEqual(engine.state.count(of: .fireflyNectar), 1)
     }
 
     func testPlayingPrologueUnlocksChapterOne() {
@@ -24,7 +24,7 @@ final class ChapterProgressTests: XCTestCase {
         XCTAssertEqual(engine.status(of: .chapterOne), .available)
         XCTAssertEqual(engine.state.storyPosition, nil)
         XCTAssertTrue(engine.state.hasDiary("chapter.prologue"))
-        XCTAssertGreaterThan(engine.state.count(of: .acorn), 0)
+        XCTAssertGreaterThan(engine.state.count(of: .dewberry), 0)
     }
 
     func testChoiceGivesAffinityOnce() {
@@ -43,7 +43,7 @@ final class ChapterProgressTests: XCTestCase {
 
         XCTAssertTrue(engine.startGathering(at: .berryPatch, seed: 21))
         TestSupport.catchEverything(engine)
-        XCTAssertTrue(engine.startCooking(ingredients: [.acorn, .raspberry]))
+        XCTAssertTrue(engine.startCooking(ingredients: [.dewberry, .fireflyNectar]))
         TestSupport.stirToPerfect(engine)
         _ = engine.finishCooking()
 
@@ -56,9 +56,9 @@ final class ChapterProgressTests: XCTestCase {
         state.markCompleted(.chapterOne)
         state.markCompleted(.chapterTwo)
         state.stats.totalCaught = 10
-        state.addCooked(recipeID: "acorn-pie", quality: .good)
-        state.addCooked(recipeID: "raspberry-jam", quality: .good)
-        state.addCooked(recipeID: "mushroom-soup", quality: .good)
+        state.addCooked(recipeID: "dawn-dew-jam", quality: .good)
+        state.addCooked(recipeID: "firefly-sparkle-jam", quality: .good)
+        state.addCooked(recipeID: "starlight-mist-jam", quality: .good)
         XCTAssertFalse(ChapterRules.isUnlocked(.chapterThree, in: state))
 
         for character in CharacterID.allCases {
@@ -74,7 +74,7 @@ final class ChapterProgressTests: XCTestCase {
         state.markCompleted(.chapterThree)
         XCTAssertFalse(ChapterRules.isUnlocked(.epilogue, in: state))
 
-        state.addCooked(recipeID: "starlight-cake", quality: .perfect)
+        state.addCooked(recipeID: "golden-fullmoon-jam", quality: .perfect)
         for character in CharacterID.allCases {
             state.addAffinity(45, to: character)
         }
@@ -101,7 +101,7 @@ final class ChapterProgressTests: XCTestCase {
 
         XCTAssertTrue(engine.startGathering(at: .berryPatch, seed: 21))
         TestSupport.catchEverything(engine)
-        XCTAssertTrue(engine.startCooking(ingredients: [.acorn, .raspberry]))
+        XCTAssertTrue(engine.startCooking(ingredients: [.dewberry, .fireflyNectar]))
         _ = engine.finishCooking()
 
         XCTAssertEqual(engine.refreshChapterAvailability(), .chapterTwo)
@@ -112,12 +112,12 @@ final class ChapterProgressTests: XCTestCase {
     func testCompletedChapterCannotBeReplayedForRewards() {
         let engine = TestSupport.engine()
         _ = TestSupport.playChapter(engine, .prologue)
-        let acorns = engine.state.count(of: .acorn)
+        let berries = engine.state.count(of: .dewberry)
         let step = engine.startChapter(.prologue)
         guard case .blocked = step else {
             return XCTFail("이미 끝난 이야기가 다시 시작됐다")
         }
-        XCTAssertEqual(engine.state.count(of: .acorn), acorns)
+        XCTAssertEqual(engine.state.count(of: .dewberry), berries)
     }
 
     func testFullStoryCanBeCompleted() {
@@ -127,8 +127,8 @@ final class ChapterProgressTests: XCTestCase {
         for character in CharacterID.allCases {
             state.addAffinity(45, to: character)
         }
-        state.addCooked(recipeID: "starlight-cake", quality: .perfect)
-        state.cooked.append(CookedRecord(recipeID: "acorn-pie", servings: 0, timesCooked: 1))
+        state.addCooked(recipeID: "golden-fullmoon-jam", quality: .perfect)
+        state.cooked.append(CookedRecord(recipeID: "dawn-dew-jam", servings: 0, timesCooked: 1))
         state.setStatus(.available, for: .chapterThree)
         state.setStatus(.available, for: .epilogue)
         let engine = TestSupport.engine(state: state)

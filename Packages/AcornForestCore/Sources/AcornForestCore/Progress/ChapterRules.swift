@@ -34,7 +34,7 @@ public enum ChapterRules {
         case .epilogue:
             guard state.status(of: .chapterThree) == .completed else { return false }
             let closeCount = CharacterID.allCases.filter { state.affinityPoints(for: $0) >= closeAffinityThreshold }.count
-            return state.cookedRecipeIDs.contains("starlight-cake") && closeCount == CharacterID.allCases.count
+            return state.cookedRecipeIDs.contains("golden-fullmoon-jam") && closeCount == CharacterID.allCases.count
         }
     }
 
@@ -67,7 +67,7 @@ public enum ChapterRules {
             let closeCount = CharacterID.allCases.filter { state.affinityPoints(for: $0) >= closeAffinityThreshold }.count
             return [
                 ChapterGoal(id: "epi-chapter3", text: "3장을 마친다", isMet: previousDone(.chapterThree)),
-                ChapterGoal(id: "epi-cake", text: "별빛 축제 케이크를 만든다", isMet: state.cookedRecipeIDs.contains("starlight-cake")),
+                ChapterGoal(id: "epi-moon-jam", text: "황금 보름달 잼을 담근다", isMet: state.cookedRecipeIDs.contains("golden-fullmoon-jam")),
                 ChapterGoal(id: "epi-close", text: "네 이웃 모두와 단짝이 된다 (\(closeCount)/4)", isMet: closeCount == 4)
             ]
         }
@@ -99,7 +99,7 @@ public enum ChapterRules {
         case .epilogue:
             let closeCount = CharacterID.allCases.filter { state.affinityPoints(for: $0) >= closeAffinityThreshold }.count
             return state.status(of: .chapterThree) == .completed
-                && state.cookedRecipeIDs.contains("starlight-cake")
+                && state.cookedRecipeIDs.contains("golden-fullmoon-jam")
                 && closeCount == 4
         }
     }

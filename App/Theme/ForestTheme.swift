@@ -21,6 +21,9 @@ enum ForestPalette {
     static let honey = Color(hex: 0xE0B15C)
     static let berry = Color(hex: 0xC96A78)
     static let chestnut = Color(hex: 0x8C5A3C)
+    static let dew = Color(hex: 0x7FA6C9)
+    static let starmoss = Color(hex: 0x8FBFA8)
+    static let moonflake = Color(hex: 0xB3A3D4)
     static let night = Color(hex: 0x2B3247)
     static let moonlight = Color(hex: 0xF1E9C9)
     static let nightSage = Color(hex: 0x4A5F55)
@@ -52,10 +55,10 @@ extension Font {
 extension Ingredient {
     var tint: Color {
         switch self {
-        case .raspberry: return ForestPalette.berry
-        case .acorn: return ForestPalette.chestnut
-        case .honeyMushroom: return ForestPalette.honey
-        case .moonHerb: return ForestPalette.sage
+        case .dewberry: return ForestPalette.dew
+        case .fireflyNectar: return ForestPalette.honey
+        case .starMossShroom: return ForestPalette.starmoss
+        case .moonflakeSpice: return ForestPalette.moonflake
         }
     }
 }

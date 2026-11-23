@@ -52,7 +52,7 @@ public enum StoryScript {
                 text: "일단 들어가서 따뜻한 것부터 먹자",
                 gains: [AffinityGain(.tori, 4)],
                 flag: "prologue.warmFirst",
-                reply: StoryLine(id: "p1-c1-r", speaker: .tori, text: "밥…? 그거 좋은데. 대신 도토리 파이가 좋아. 산딸기 넣은 거.")
+                reply: StoryLine(id: "p1-c1-r", speaker: .tori, text: "밥…? 그거 좋은데. 대신 새벽이슬 잼이 좋아. 이슬이 마르기 전에 딴 베리로 만든 거.")
             ),
             StoryChoice(
                 id: "p1-c2",
@@ -76,14 +76,14 @@ public enum StoryScript {
             StoryLine(id: "p2-2", speaker: .bori, text: "‘숲의 별빛 축제 — 네 사람의 소원이 한자리에 모이면, 숲이 스스로 불을 밝힌다.’"),
             StoryLine(id: "p2-3", speaker: .tori, text: "할머니가 매년 하던 거야. 근데 마지막 축제는… 아무도 못 왔어."),
             StoryLine(id: "p2-4", speaker: .bori, text: "왜?"),
-            StoryLine(id: "p2-5", speaker: .tori, text: "저마다 사정이 생겼지. 송이는 사람이 무서워서 숨고, 몽은 밤에만 눈을 뜨고, 루비는 말은 많은데 정작 자기 얘기는 안 해. 나도… 도토리를 세다가 날짜를 잊었고."),
+            StoryLine(id: "p2-5", speaker: .tori, text: "저마다 사정이 생겼지. 송이는 사람이 무서워서 숨고, 몽은 밤에만 눈을 뜨고, 루비는 말은 많은데 정작 자기 얘기는 안 해. 나도… 베리를 세다가 날짜를 잊었고."),
             StoryLine(id: "p2-6", speaker: .bori, text: "그럼 이번엔 내가 모아 볼게. 네 명이면 되는 거잖아."),
-            StoryLine(id: "p2-7", speaker: .tori, text: "…너, 이상한 애다. 서울에서 온 애가 왜 이렇게 숲 말을 잘해. 좋아, 소개는 내가 해 줄게. 대신 요리는 네가 해.")
+            StoryLine(id: "p2-7", speaker: .tori, text: "…너, 이상한 애다. 서울에서 온 애가 왜 이렇게 숲 말을 잘해. 좋아, 소개는 내가 해 줄게. 대신 잼은 네가 담글 것.")
         ],
         choices: [],
-        grants: [ItemStack(.acorn, 2)],
+        grants: [ItemStack(.dewberry, 2)],
         unlocksDiary: [],
-        closingThought: "오두막의 불을 켰다. 창밖에서 누군가 조용히 도토리를 떨어뜨리는 소리가 났다."
+        closingThought: "오두막의 불을 켰다. 창밖에서 누군가 조용히 베리를 떨어뜨리는 소리가 났다."
     )
 
     // MARK: - 1장
@@ -98,7 +98,7 @@ public enum StoryScript {
             StoryLine(id: "c1a-3", speaker: .bori, text: "미안해요. 불이 켜져 있어서 그냥…"),
             StoryLine(id: "c1a-4", speaker: .mong, text: "괜찮습니다. 밤에만 눈을 뜨는 새에게 낮의 예절을 요구할 수는 없죠. 저는 몽입니다. 이 서재의 책을 전부 읽었고, 그중 절반은 잊었습니다."),
             StoryLine(id: "c1a-5", speaker: .bori, text: "할머니가 자주 왔었어요?"),
-            StoryLine(id: "c1a-6", speaker: .mong, text: "매달 한 번, 차를 두 잔 끓여 왔습니다. 제가 잠든 척하면 조용히 두고 갔죠. 그런 사람이 또 오면 좋겠다고 생각한 적은 있습니다.")
+            StoryLine(id: "c1a-6", speaker: .mong, text: "매달 한 번, 반딧불 꽃꿀차를 두 잔 끓여 왔습니다. 제가 잠든 척하면 조용히 두고 갔죠. 그런 사람이 또 오면 좋겠다고 생각한 적은 있습니다.")
         ],
         choices: [
             StoryChoice(
@@ -106,17 +106,17 @@ public enum StoryScript {
                 text: "할머니 이야기, 조금 더 들려줄래요?",
                 gains: [AffinityGain(.mong, 5)],
                 flag: "ch1.mongStory",
-                reply: StoryLine(id: "c1a-c1-r", speaker: .mong, text: "…이야기는 길어집니다. 대신 차를 끓여 오세요. 그럼 밤이 아무리 짧아도 괜찮을 테니.")
+                reply: StoryLine(id: "c1a-c1-r", speaker: .mong, text: "…이야기는 길어집니다. 대신 꽃꿀차를 끓여 오세요. 그럼 밤이 아무리 짧아도 괜찮을 테니.")
             ),
             StoryChoice(
                 id: "c1a-c2",
                 text: "이 서재, 정말 멋지네요",
                 gains: [AffinityGain(.mong, 3)],
                 flag: "ch1.mongShelf",
-                reply: StoryLine(id: "c1a-c2-r", speaker: .mong, text: "그렇게 말해 준 사람은 할머니 다음으로 두 번째입니다. 창가 화분의 허브는 가져가도 좋아요. 제가 먹지 않으니까.")
+                reply: StoryLine(id: "c1a-c2-r", speaker: .mong, text: "그렇게 말해 준 사람은 할머니 다음으로 두 번째입니다. 창가에 매달아 둔 달조각 향신료 봉지는 가져가도 좋아요. 제가 쓰지 않으니까.")
             )
         ],
-        grants: [ItemStack(.moonHerb, 1)],
+        grants: [ItemStack(.moonflakeSpice, 1)],
         unlocksDiary: [],
         closingThought: "서재 문을 닫고 나오자 촛불이 두 번 흔들렸다. 인사 대신일 거라고 생각했다."
     )
@@ -129,7 +129,7 @@ public enum StoryScript {
             StoryLine(id: "c1b-1", speaker: .rubi, text: "이야— 새 얼굴! 숲이 들썩이겠는데? 소식통인 내가 벌써 세 번째로 네 얘기를 하고 다녔어."),
             StoryLine(id: "c1b-2", speaker: .bori, text: "세 번째…? 하루 만에?"),
             StoryLine(id: "c1b-3", speaker: .rubi, text: "재능이야. 아, 그런데 토리가 내가 제일 예쁘다고 했어? 아니면 제일 시끄럽다고 했어? 둘 다면 좀 서운한데."),
-            StoryLine(id: "c1b-4", speaker: .narrator, text: "덤불 뒤에서 산딸기가 톡, 하고 터지는 소리가 났다. 루비의 꼬리 끝이 살짝 젖어 있었다."),
+            StoryLine(id: "c1b-4", speaker: .narrator, text: "덤불 뒤에서 이슬방울 베리가 톡, 하고 터지는 소리가 났다. 루비의 꼬리 끝이 살짝 젖어 있었다."),
             StoryLine(id: "c1b-5", speaker: .bori, text: "…루비는, 매일 아침 누구한테 인사해?"),
             StoryLine(id: "c1b-6", speaker: .rubi, text: "…아무한테도. 다들 내가 시끄러우니까 피하거든. 근데 너는 안 피했어. 그래서 내가 오늘 세 번 얘기한 거야.")
         ],
@@ -139,7 +139,7 @@ public enum StoryScript {
                 text: "내일 아침에도 인사하러 올게",
                 gains: [AffinityGain(.rubi, 5)],
                 flag: "ch1.rubiMorning",
-                reply: StoryLine(id: "c1b-c1-r", speaker: .rubi, text: "진짜? 그럼 나 안 피할 자신 있어? …좋아, 산딸기 바구니는 내가 채워 줄게.")
+                reply: StoryLine(id: "c1b-c1-r", speaker: .rubi, text: "진짜? 그럼 나 안 피할 자신 있어? …좋아, 이슬방울 베리 바구니는 내가 채워 줄게.")
             ),
             StoryChoice(
                 id: "c1b-c2",
@@ -149,9 +149,9 @@ public enum StoryScript {
                 reply: StoryLine(id: "c1b-c2-r", speaker: .rubi, text: "알겠어, 알겠어. 대신 진짜 중요한 소식만 옮길게. 이 숲에서 제일 중요한 건 결국 누가 뭘 먹고 싶어 하는지니까.")
             )
         ],
-        grants: [ItemStack(.raspberry, 2)],
+        grants: [ItemStack(.dewberry, 2)],
         unlocksDiary: [],
-        closingThought: "돌아오는 길에 발끝에 산딸기가 굴러왔다. 루비가 일부러 굴린 것 같았다."
+        closingThought: "돌아오는 길에 발끝에 이슬방울 베리가 굴러왔다. 루비가 일부러 굴린 것 같았다."
     )
 
     // MARK: - 2장
@@ -165,7 +165,7 @@ public enum StoryScript {
             StoryLine(id: "c2a-2", speaker: .narrator, text: "잎사귀 뒤에서 무언가 바스락했다. 고슴도치가 반쯤 숨은 채 이쪽을 보고 있었다."),
             StoryLine(id: "c2a-3", speaker: .bori, text: "송이야? 토리가 말했어. 이 정원을 만든 사람이 너라고."),
             StoryLine(id: "c2a-4", speaker: .songi, text: "…(끄덕)"),
-            StoryLine(id: "c2a-5", speaker: .bori, text: "꿀버섯이 이렇게 크게 자랐네. 비 온 다음 날에만 난다던데, 맞아?"),
+            StoryLine(id: "c2a-5", speaker: .bori, text: "별이끼 버섯이 이렇게 크게 자랐네. 별이 진 다음 날에만 핀다던데, 맞아?"),
             StoryLine(id: "c2a-6", speaker: .songi, text: "…맞아. 근데 이름은 아직 안 붙였어. 이름을 붙이면, 떠날 때 아파서."),
             StoryLine(id: "c2a-7", speaker: .narrator, text: "고슴도치가 잎 뒤에서 조금 나왔다. 등에 걸린 나뭇잎이 아직 젖어 있었다.")
         ],
@@ -175,17 +175,17 @@ public enum StoryScript {
                 text: "그럼 우리, 하나씩 이름을 붙여 보자",
                 gains: [AffinityGain(.songi, 6)],
                 flag: "ch2.naming",
-                reply: StoryLine(id: "c2a-c1-r", speaker: .songi, text: "…하나씩? 같이? …그럼 제일 큰 건, ‘비둘기’라고 할래. 비 온 다음에 자꾸 와서.")
+                reply: StoryLine(id: "c2a-c1-r", speaker: .songi, text: "…하나씩? 같이? …그럼 제일 큰 건, ‘비둘기’라고 할래. 별이 진 다음에 자꾸 와서.")
             ),
             StoryChoice(
                 id: "c2a-c2",
                 text: "옆에 그냥 앉아 있을게. 말 안 해도 돼",
                 gains: [AffinityGain(.songi, 4)],
                 flag: "ch2.sitting",
-                reply: StoryLine(id: "c2a-c2-r", speaker: .songi, text: "…(한참 뒤) 이거, 먹어. 꿀버섯. 아직 이름은 없지만, 맛은 있어.")
+                reply: StoryLine(id: "c2a-c2-r", speaker: .songi, text: "…(한참 뒤) 이거, 먹어. 별이끼 버섯. 아직 이름은 없지만, 별 맛은 나.")
             )
         ],
-        grants: [ItemStack(.honeyMushroom, 2)],
+        grants: [ItemStack(.starMossShroom, 2)],
         unlocksDiary: [],
         closingThought: "돌아설 때 등 뒤에서 아주 작은 목소리로 ‘안녕’이라는 소리가 났다. 못 들은 척했다."
     )
@@ -197,29 +197,29 @@ public enum StoryScript {
         lines: [
             StoryLine(id: "c2b-1", speaker: .narrator, text: "수첩의 첫 장을 폈다. 할머니 글씨가 연필로 눌려 있었다."),
             StoryLine(id: "c2b-2", speaker: .bori, text: "‘재료는 두세 가지면 충분하다. 불은 재촉하지 않는다. 손님은 배고플 때 데려온다.’"),
-            StoryLine(id: "c2b-3", speaker: .tori, text: "이거! 이 조합! 산딸기랑 도토리. 할머니 파이 냄새 나잖아."),
-            StoryLine(id: "c2b-4", speaker: .bori, text: "부엌에 도토리는 있는데… 산딸기가 조금밖에 없어."),
-            StoryLine(id: "c2b-5", speaker: .tori, text: "그럼 채집하러 가자. 덤불이든 연못이든, 재료는 다 숲에 있어. 대신 떨어지는 걸 잘 받아야 해. 나는 손이 느려서 늘 놓친다고."),
+            StoryLine(id: "c2b-3", speaker: .tori, text: "이거! 이 조합! 이슬방울 베리 두 알. 할머니 잼 냄새 나잖아."),
+            StoryLine(id: "c2b-4", speaker: .bori, text: "부엌에 베리가 두 알 남아 있어. 첫 잼은 이걸로 담가 볼까?"),
+            StoryLine(id: "c2b-5", speaker: .tori, text: "두 알이면 딱이야. 하나는 솥에, 하나는 마지막에 톡. 더 담그려면 채집하러 나가야 해. 재료는 다 숲에 있고, 떨어지는 걸 잘 받아야 하니까."),
             StoryLine(id: "c2b-6", speaker: .bori, text: "받는 건 자신 있어. 대신 불 조절은 도와줘."),
             StoryLine(id: "c2b-7", speaker: .tori, text: "…너, 생각보다 쓸 만한 애다.")
         ],
         choices: [
             StoryChoice(
                 id: "c2b-c1",
-                text: "같이 만들어 보자. 첫 요리는 같이",
+                text: "같이 만들어 보자. 첫 잼은 같이",
                 gains: [AffinityGain(.tori, 5), AffinityGain(.songi, 1)],
                 flag: "ch2.cookTogether",
-                reply: StoryLine(id: "c2b-c1-r", speaker: .tori, text: "좋아! 내가 산딸기 씻을게. 아, 근데 물은 좀 적게. 산딸기는 물을 먹으면 흐물흐물해지니까.")
+                reply: StoryLine(id: "c2b-c1-r", speaker: .tori, text: "좋아! 내가 베리 씻을게. 아, 근데 물은 좀 적게. 이슬방울 베리는 물을 먹으면 반짝임이 지워지니까.")
             ),
             StoryChoice(
                 id: "c2b-c2",
                 text: "내가 먼저 한 번 해 볼게",
                 gains: [AffinityGain(.tori, 2)],
                 flag: "ch2.cookAlone",
-                reply: StoryLine(id: "c2b-c2-r", speaker: .tori, text: "뭐, 그럼 나는 옆에서 불만 볼게. 대신 타면 내가 다 먹는다? 아니, 그것도 좀…")
+                reply: StoryLine(id: "c2b-c2-r", speaker: .tori, text: "뭐, 그럼 나는 옆에서 불만 볼게. 대신 졸면 내가 다 먹는다? 아니, 그것도 좀…")
             )
         ],
-        grants: [ItemStack(.moonHerb, 1)],
+        grants: [ItemStack(.moonflakeSpice, 1)],
         unlocksDiary: [],
         closingThought: "솥단지가 끓기 시작했다. 숲에서 처음으로, 이 집의 불이 제 일을 했다."
     )
@@ -236,16 +236,16 @@ public enum StoryScript {
             StoryLine(id: "c3a-3", speaker: .mong, text: "소원이라. 저는 별이 창문으로 한 번 더 들어오는 밤이면 충분합니다."),
             StoryLine(id: "c3a-4", speaker: .songi, text: "…정원에, 이름을 붙여 주는 사람. 그게 소원이야."),
             StoryLine(id: "c3a-5", speaker: .rubi, text: "나는 노래! 숲 전체가 같이 부르는 노래. 아, 근데 다들 음치는 아니지?"),
-            StoryLine(id: "c3a-6", speaker: .tori, text: "나는 도토리 파이. 잔뜩 모아서 누구랑 나눠 먹는 저녁. 혼자 먹으면 그냥 밥이잖아."),
+            StoryLine(id: "c3a-6", speaker: .tori, text: "나는 유성우 베리 콩포트. 잔뜩 끓여서 누구랑 나눠 먹는 저녁. 혼자 먹으면 그냥 단 거잖아."),
             StoryLine(id: "c3a-7", speaker: .bori, text: "…그럼 다섯 번째 소원은 내가 할게. 이 식탁에 다섯 명이 앉는 것.")
         ],
         choices: [
             StoryChoice(
                 id: "c3a-c1",
-                text: "토리, 파이 만드는 건 내가 도울게",
+                text: "토리, 콩포트 끓이는 건 내가 도울게",
                 gains: [AffinityGain(.tori, 6)],
                 flag: "ch3.helpTori",
-                reply: StoryLine(id: "c3a-c1-r", speaker: .tori, text: "진짜? 그럼 도토리는 내가 제일 좋은 걸로 골라 올게. 내가 고르는 건 틀린 적이 없어.")
+                reply: StoryLine(id: "c3a-c1-r", speaker: .tori, text: "진짜? 그럼 베리는 내가 제일 좋은 걸로 골라 올게. 내가 고르는 건 틀린 적이 없어.")
             ),
             StoryChoice(
                 id: "c3a-c2",
@@ -270,10 +270,10 @@ public enum StoryScript {
             )
         ],
         grants: [
-            ItemStack(.acorn, 1),
-            ItemStack(.raspberry, 1),
-            ItemStack(.honeyMushroom, 1),
-            ItemStack(.moonHerb, 1)
+            ItemStack(.dewberry, 1),
+            ItemStack(.fireflyNectar, 1),
+            ItemStack(.starMossShroom, 1),
+            ItemStack(.moonflakeSpice, 1)
         ],
         unlocksDiary: [],
         closingThought: "컵 다섯 개가 달빛을 받아 같은 색으로 빛났다. 소원이 모이기 시작한 것 같았다."
@@ -284,13 +284,13 @@ public enum StoryScript {
         chapter: .chapterThree,
         title: "등불을 만드는 밤",
         lines: [
-            StoryLine(id: "c3b-1", speaker: .narrator, text: "축제 전날 밤. 오두막 마루에 유리병이 스물네 개 놓이고, 그 안에 달빛허브가 한 잎씩 들어갔다."),
+            StoryLine(id: "c3b-1", speaker: .narrator, text: "축제 전날 밤. 오두막 마루에 유리병이 스물네 개 놓이고, 그 안에 달조각 향신료가 한 꼬집씩 들어갔다."),
             StoryLine(id: "c3b-2", speaker: .mong, text: "이 병은 제가 맡겠습니다. 밤에 하는 일은 익숙하니까요. 대신 낮에 할 일을 하나 부탁해도 될까요."),
             StoryLine(id: "c3b-3", speaker: .bori, text: "뭐든. 말해 봐."),
             StoryLine(id: "c3b-4", speaker: .mong, text: "축제가 끝나도, 이 집에 불이 켜져 있었으면 합니다. 제가 잠들지 않아도 들를 수 있게요."),
             StoryLine(id: "c3b-5", speaker: .rubi, text: "아! 나도! 나는 축제 다음 날 아침에도 문 앞에서 노래할 거야. 시끄럽다고 쫓아내지 마."),
             StoryLine(id: "c3b-6", speaker: .songi, text: "…나는, 화분 두 개를 더 심을 거야. 문 앞에. 들어올 때 보이게."),
-            StoryLine(id: "c3b-7", speaker: .tori, text: "나는… 파이를 한 판 더 만들 거야. 축제에서 다 먹으면 내일이 없잖아.")
+            StoryLine(id: "c3b-7", speaker: .tori, text: "나는… 잼을 한 항아리 더 담글 거야. 축제에서 다 먹으면 내일이 없잖아.")
         ],
         choices: [
             StoryChoice(
@@ -298,17 +298,17 @@ public enum StoryScript {
                 text: "그럼 내일 아침 메뉴도 정해 두자",
                 gains: [AffinityGain(.tori, 3), AffinityGain(.songi, 3), AffinityGain(.mong, 3), AffinityGain(.rubi, 3)],
                 flag: "ch3.nextMorning",
-                reply: StoryLine(id: "c3b-c1-r", speaker: .rubi, text: "좋아! 내일 아침은 노래로 시작하는 거야. 그리고 파이. 그리고 잼. 그리고… 배고파지네.")
+                reply: StoryLine(id: "c3b-c1-r", speaker: .rubi, text: "좋아! 내일 아침은 노래로 시작하는 거야. 그리고 콩포트. 그리고 잼. 그리고… 배고파지네.")
             ),
             StoryChoice(
                 id: "c3b-c2",
-                text: "별빛 축제 케이크를 만들 거야",
+                text: "황금 보름달 잼을 담글 거야",
                 gains: [AffinityGain(.rubi, 4), AffinityGain(.mong, 2)],
                 flag: "ch3.cakePlan",
-                reply: StoryLine(id: "c3b-c2-r", speaker: .mong, text: "케이크라. 그럼 달빛허브를 촛불 대신 꽂으세요. 불을 붙이지 않아도, 그 잎은 스스로 빛나니까.")
+                reply: StoryLine(id: "c3b-c2-r", speaker: .mong, text: "황금 보름달 잼이라. 그럼 뚜껑은 축제가 시작할 때까지 열지 마세요. 달이 항아리 안에서 떠오르는 건, 처음 열 때 한 번뿐이니까.")
             )
         ],
-        grants: [ItemStack(.moonHerb, 1)],
+        grants: [ItemStack(.moonflakeSpice, 1)],
         unlocksDiary: [],
         closingThought: "병 스물네 개가 마루에 늘어섰다. 바람이 지나갈 때마다 작은 별이 스물네 번 흔들렸다."
     )
@@ -320,8 +320,8 @@ public enum StoryScript {
         chapter: .epilogue,
         title: "별빛 아래에서",
         lines: [
-            StoryLine(id: "e1-1", speaker: .narrator, text: "보름. 축제터에 스물네 개의 등불이 걸리고, 식탁에는 파이와 수프와 잼과 차가 놓였다. 가운데에는 달빛허브를 꽂은 케이크가 있다."),
-            StoryLine(id: "e1-2", speaker: .tori, text: "…이거, 할머니 파이랑 똑같은 냄새야. 어떻게 알았어?"),
+            StoryLine(id: "e1-1", speaker: .narrator, text: "보름. 축제터에 스물네 개의 등불이 걸리고, 식탁에는 잼과 콩포트와 젤리가 놓였다. 가운데에는 황금 보름달 잼 한 항아리가 있다."),
+            StoryLine(id: "e1-2", speaker: .tori, text: "…이거, 할머니 잼이랑 똑같은 냄새야. 어떻게 알았어?"),
             StoryLine(id: "e1-3", speaker: .bori, text: "수첩에 적혀 있었어. ‘손님은 배고플 때 데려온다.’"),
             StoryLine(id: "e1-4", speaker: .songi, text: "정원 이름, 마음에 들어. ‘다섯 컵’. …매일 다섯 개를 씻을 거야."),
             StoryLine(id: "e1-5", speaker: .mong, text: "별이 들어왔습니다. 창문이 아니라, 이 자리로."),
@@ -334,7 +334,7 @@ public enum StoryScript {
                 text: "네 사람 모두에게 고맙다고 말한다",
                 gains: [AffinityGain(.tori, 4), AffinityGain(.songi, 4), AffinityGain(.mong, 4), AffinityGain(.rubi, 4)],
                 flag: "epilogue.thanks",
-                reply: StoryLine(id: "e1-c1-r", speaker: .tori, text: "고맙긴. 우리가 더 고마운데. …야, 파이 한 조각 더 먹어. 오늘은 세어 보지 마.")
+                reply: StoryLine(id: "e1-c1-r", speaker: .tori, text: "고맙긴. 우리가 더 고마운데. …야, 잼 한 숟갈 더 먹어. 오늘은 세어 보지 마.")
             ),
             StoryChoice(
                 id: "e1-c2",

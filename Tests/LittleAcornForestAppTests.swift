@@ -32,7 +32,7 @@ final class LittleAcornForestAppTests: XCTestCase {
     }
 
     func testStockLine() {
-        XCTAssertEqual(AppText.stockLine(ItemStack(.moonHerb, 3)), "🌿 달빛허브 3")
+        XCTAssertEqual(AppText.stockLine(ItemStack(.moonflakeSpice, 3)), "🌙 달조각 향신료 3")
     }
 
     @MainActor
@@ -44,7 +44,7 @@ final class LittleAcornForestAppTests: XCTestCase {
         store.newGame()
 
         XCTAssertEqual(store.screen, .map)
-        XCTAssertEqual(store.state.count(of: .acorn), 2)
+        XCTAssertEqual(store.state.count(of: .dewberry), 2)
         XCTAssertTrue(store.hasSave)
     }
 

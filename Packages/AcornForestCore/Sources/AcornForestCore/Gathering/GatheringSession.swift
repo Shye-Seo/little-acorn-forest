@@ -209,10 +209,10 @@ public struct GatheringSession: Sendable {
     public var bonusHarvest: [ItemStack] {
         var bonus: [ItemStack] = []
         if bestStreak >= 6 {
-            bonus.append(ItemStack(.moonHerb, 1))
+            bonus.append(ItemStack(.moonflakeSpice, 1))
         }
         if caughtCount >= 8 {
-            bonus.append(ItemStack(.acorn, 1))
+            bonus.append(ItemStack(.fireflyNectar, 1))
         }
         return bonus
     }

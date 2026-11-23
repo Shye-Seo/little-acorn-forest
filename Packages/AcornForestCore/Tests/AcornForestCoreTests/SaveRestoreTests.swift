@@ -6,10 +6,10 @@ final class SaveRestoreTests: XCTestCase {
 
     func testCodecRoundTripKeepsState() throws {
         var state = GameState(startedAt: fixedDate)
-        state.add(.moonHerb, count: 3)
+        state.add(.moonflakeSpice, count: 3)
         state.addAffinity(30, to: .rubi)
-        state.addCooked(recipeID: "raspberry-jam", quality: .perfect)
-        state.unlockDiary("recipe.raspberry-jam")
+        state.addCooked(recipeID: "firefly-sparkle-jam", quality: .perfect)
+        state.unlockDiary("recipe.firefly-sparkle-jam")
         state.setFlag("test")
         state.markCompleted(.prologue)
         state.setStatus(.available, for: .chapterOne)
@@ -79,7 +79,7 @@ final class SaveRestoreTests: XCTestCase {
         var state = GameState()
         state.chapters = []
         state.affinity = []
-        state.inventory = [ItemStack(.acorn, 0), ItemStack(.raspberry, 2)]
+        state.inventory = [ItemStack(.dewberry, 0), ItemStack(.fireflyNectar, 2)]
         state.diary = ["chapter.prologue", "chapter.prologue"]
         state.normalize()
         XCTAssertEqual(state.chapters.count, StoryChapter.allCases.count)

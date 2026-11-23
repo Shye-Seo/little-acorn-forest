@@ -26,7 +26,7 @@ final class AffinityAndDiaryTests: XCTestCase {
         guard let favorite = RecipeBook.recipe(id: CharacterID.tori.favoriteRecipeID),
               let likedID = CharacterID.tori.likedRecipeIDs.first,
               let liked = RecipeBook.recipe(id: likedID),
-              let neutral = RecipeBook.recipe(id: "moonlight-tea") else {
+              let neutral = RecipeBook.recipe(id: "moonshadow-herb-jelly") else {
             return XCTFail("레시피를 찾지 못했다")
         }
         let favoritePoints = AffinitySystem.baseGiftPoints(recipe: favorite, for: .tori)
@@ -56,22 +56,22 @@ final class AffinityAndDiaryTests: XCTestCase {
 
     func testGiftConsumesServingAndRaisesAffinity() {
         var state = TestSupport.stockedState([])
-        state.addCooked(recipeID: "acorn-pie", quality: .good)
+        state.addCooked(recipeID: "meteor-berry-compote", quality: .good)
         let engine = TestSupport.engine(state: state)
-        let outcome = engine.gift(recipeID: "acorn-pie", to: .tori)
+        let outcome = engine.gift(recipeID: "meteor-berry-compote", to: .tori)
         XCTAssertTrue(outcome.succeeded)
         XCTAssertEqual(outcome.gain, 12)
         XCTAssertEqual(engine.state.affinityPoints(for: .tori), 12)
-        XCTAssertEqual(engine.state.servings(of: "acorn-pie"), 0)
+        XCTAssertEqual(engine.state.servings(of: "meteor-berry-compote"), 0)
         XCTAssertEqual(engine.state.stats.gifts, 1)
     }
 
     func testPerfectDishAddsBonusAndUnlocksMemory() {
         var state = TestSupport.stockedState([])
-        state.addCooked(recipeID: "acorn-pie", quality: .perfect)
+        state.addCooked(recipeID: "meteor-berry-compote", quality: .perfect)
         state.addAffinity(18, to: .tori)
         let engine = TestSupport.engine(state: state)
-        let outcome = engine.gift(recipeID: "acorn-pie", to: .tori)
+        let outcome = engine.gift(recipeID: "meteor-berry-compote", to: .tori)
         XCTAssertEqual(outcome.gain, 15)
         XCTAssertTrue(outcome.didLevelUp)
         XCTAssertEqual(outcome.levelAfter, .greeting)
@@ -80,7 +80,7 @@ final class AffinityAndDiaryTests: XCTestCase {
 
     func testGiftWithoutDishFails() {
         let engine = TestSupport.engine(state: TestSupport.stockedState([]))
-        let outcome = engine.gift(recipeID: "acorn-pie", to: .rubi)
+        let outcome = engine.gift(recipeID: "meteor-berry-compote", to: .rubi)
         XCTAssertFalse(outcome.succeeded)
         XCTAssertEqual(outcome.gain, 0)
         XCTAssertEqual(engine.state.affinityPoints(for: .rubi), 0)
@@ -90,7 +90,7 @@ final class AffinityAndDiaryTests: XCTestCase {
         var state = GameEngine.freshState()
         XCTAssertEqual(state.diaryProgress.unlocked, 0)
         XCTAssertEqual(state.diaryProgress.total, ForestDiary.totalCount)
-        state.unlockDiary("recipe.acorn-pie")
+        state.unlockDiary("recipe.dawn-dew-jam")
         XCTAssertEqual(state.diaryProgress.unlocked, 1)
         XCTAssertEqual(state.diaryProgress.ratio, 1.0 / Double(ForestDiary.totalCount), accuracy: 0.0001)
     }

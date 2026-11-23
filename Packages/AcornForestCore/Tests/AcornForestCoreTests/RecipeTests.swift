@@ -3,16 +3,19 @@ import AcornForestCore
 
 final class RecipeTests: XCTestCase {
     func testRecipeLookupIgnoresOrder() {
-        XCTAssertEqual(RecipeBook.recipe(for: [.raspberry, .acorn])?.id, "acorn-pie")
-        XCTAssertEqual(RecipeBook.recipe(for: [.acorn, .raspberry])?.id, "acorn-pie")
-        XCTAssertEqual(RecipeBook.recipe(for: [.moonHerb, .honeyMushroom, .acorn])?.id, "grandma-porridge")
+        XCTAssertEqual(RecipeBook.recipe(for: [.dewberry, .fireflyNectar])?.id, "firefly-sparkle-jam")
+        XCTAssertEqual(RecipeBook.recipe(for: [.fireflyNectar, .dewberry])?.id, "firefly-sparkle-jam")
+        XCTAssertEqual(RecipeBook.recipe(for: [.moonflakeSpice, .dewberry, .starMossShroom])?.id, "meteor-berry-compote")
     }
 
-    func testEveryRecipeUsesTwoOrThreeDistinctIngredients() {
+    func testEveryRecipeUsesTwoOrThreeIngredients() {
         XCTAssertGreaterThanOrEqual(RecipeBook.all.count, 6)
         for recipe in RecipeBook.all {
             XCTAssertTrue((2...3).contains(recipe.ingredients.count), "\(recipe.name) 재료 수")
-            XCTAssertTrue(recipe.hasDistinctIngredients, "\(recipe.name) 중복 재료")
+            if !recipe.hasDistinctIngredients {
+                XCTAssertEqual(recipe.id, "dawn-dew-jam", "같은 재료를 두 번 쓰는 잼은 새벽이슬 잼뿐이어야 한다")
+                XCTAssertEqual(recipe.ingredients.count, 2)
+            }
             XCTAssertFalse(recipe.story.isEmpty)
         }
     }
@@ -23,35 +26,38 @@ final class RecipeTests: XCTestCase {
     }
 
     func testUnknownCombinationReturnsNil() {
-        XCTAssertNil(RecipeBook.recipe(for: [.acorn, .acorn]))
+        XCTAssertNil(RecipeBook.recipe(for: [.fireflyNectar, .fireflyNectar]))
         XCTAssertNil(RecipeBook.recipe(for: []))
-        XCTAssertNil(RecipeBook.recipe(for: [.raspberry]))
+        XCTAssertNil(RecipeBook.recipe(for: [.dewberry]))
     }
 
-    func testDuplicateIngredientsAreNotSilentlyDeduped() {
-        XCTAssertNil(RecipeBook.recipe(for: [.raspberry, .raspberry]))
-        XCTAssertEqual(RecipeBook.key(for: [.raspberry, .raspberry]), "raspberry+raspberry")
+    func testDoubledBerryIsItsOwnRecipe() {
+        XCTAssertEqual(RecipeBook.recipe(for: [.dewberry, .dewberry])?.id, "dawn-dew-jam")
+        XCTAssertEqual(RecipeBook.key(for: [.dewberry, .dewberry]), "dewberry+dewberry")
+        XCTAssertNotEqual(RecipeBook.recipe(for: [.dewberry, .dewberry])?.id,
+                          RecipeBook.recipe(for: [.dewberry, .fireflyNectar])?.id)
     }
 
     func testClosestRecipeSuggestsOverlap() {
-        guard let hint = RecipeBook.closestRecipe(to: [.acorn, .moonHerb]) else {
+        guard let hint = RecipeBook.closestRecipe(to: [.dewberry, .moonflakeSpice]) else {
             return XCTFail("가까운 레시피를 찾지 못했다")
         }
-        XCTAssertTrue(hint.ingredients.contains(.acorn) || hint.ingredients.contains(.moonHerb))
+        XCTAssertTrue(hint.ingredients.contains(.dewberry) || hint.ingredients.contains(.moonflakeSpice))
         XCTAssertNil(RecipeBook.closestRecipe(to: []))
     }
 
-    func testSpecialCakeExistsForFestival() {
-        let cake = RecipeBook.recipe(id: "starlight-cake")
-        XCTAssertNotNil(cake)
-        XCTAssertEqual(cake?.key, "acorn+moonHerb+raspberry")
-        XCTAssertEqual(cake?.warmth, 3)
+    func testSignatureFestivalJamExists() {
+        let jam = RecipeBook.recipe(id: "golden-fullmoon-jam")
+        XCTAssertNotNil(jam)
+        XCTAssertEqual(jam?.key, "fireflyNectar+moonflakeSpice+starMossShroom")
+        XCTAssertEqual(jam?.warmth, 3)
+        XCTAssertEqual(jam?.minChapter, .chapterThree)
     }
 
     func testUnCookedRecipesShrinkAfterCooking() {
         var state = GameEngine.freshState()
         let before = RecipeBook.unCooked(in: state).count
-        state.addCooked(recipeID: "acorn-pie", quality: .good)
+        state.addCooked(recipeID: "dawn-dew-jam", quality: .good)
         XCTAssertEqual(RecipeBook.unCooked(in: state).count, before - 1)
     }
 }

@@ -104,7 +104,7 @@ final class GatheringTests: XCTestCase {
             _ = session.tap(lane: item.lane)
         }
         XCTAssertGreaterThanOrEqual(session.bestStreak, 6)
-        XCTAssertTrue(session.bonusHarvest.contains { $0.ingredient == .moonHerb })
+        XCTAssertTrue(session.bonusHarvest.contains { $0.ingredient == .moonflakeSpice })
         let summary = session.summary()
         XCTAssertTrue(summary.accuracy > 0.99)
     }

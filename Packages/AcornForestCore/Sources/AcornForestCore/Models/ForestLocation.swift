@@ -13,7 +13,7 @@ public enum ForestLocation: String, CaseIterable, Codable, Identifiable, Sendabl
     public var title: String {
         switch self {
         case .cabinKitchen: return "오두막 부엌"
-        case .berryPatch: return "산딸기 덤불"
+        case .berryPatch: return "이슬방울 덤불"
         case .fireflyPond: return "반딧불이 연못"
         case .owlLibrary: return "몽의 서재"
         case .festivalGlade: return "별빛 축제터"
@@ -25,7 +25,7 @@ public enum ForestLocation: String, CaseIterable, Codable, Identifiable, Sendabl
         case .cabinKitchen:
             return "할머니의 솥단지와 낡은 레시피 수첩이 그대로 남아 있다."
         case .berryPatch:
-            return "햇살이 오래 머무는 덤불. 산딸기가 손끝에서 톡 터진다."
+            return "해가 뜨기 전에만 이슬이 맺히는 덤불. 베리가 손끝에서 톡 터진다."
         case .fireflyPond:
             return "밤이 되면 연못 위로 반딧불이가 내려앉는다."
         case .owlLibrary:
@@ -38,11 +38,11 @@ public enum ForestLocation: String, CaseIterable, Codable, Identifiable, Sendabl
     /// 이곳에서 떨어지는 재료 후보(많이 적을수록 자주 나온다).
     public var ingredientPool: [Ingredient] {
         switch self {
-        case .cabinKitchen: return [.acorn, .acorn, .honeyMushroom]
-        case .berryPatch: return [.raspberry, .raspberry, .moonHerb]
-        case .fireflyPond: return [.moonHerb, .moonHerb, .raspberry]
-        case .owlLibrary: return [.acorn, .moonHerb, .honeyMushroom]
-        case .festivalGlade: return [.raspberry, .acorn, .honeyMushroom, .moonHerb]
+        case .cabinKitchen: return [.dewberry, .fireflyNectar, .starMossShroom]
+        case .berryPatch: return [.dewberry, .dewberry, .moonflakeSpice]
+        case .fireflyPond: return [.fireflyNectar, .fireflyNectar, .dewberry]
+        case .owlLibrary: return [.moonflakeSpice, .moonflakeSpice, .starMossShroom]
+        case .festivalGlade: return [.dewberry, .fireflyNectar, .starMossShroom, .moonflakeSpice]
         }
     }
 

@@ -504,7 +504,7 @@ public final class GameEngine {
             }
         } else {
             let hint = RecipeBook.closestRecipe(to: attempted).map { " ‘\($0.name)’에 가까운 조합이에요." } ?? ""
-            message = "솥단지가 뭉근한 죽이 되었어요. 레시피가 맞지 않았어요.\(hint)"
+            message = "솥단지가 뭉근한 잼이 되었어요. 수첩의 레시피와 맞지 않았어요.\(hint)"
         }
 
         lastMessage = message

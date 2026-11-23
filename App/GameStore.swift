@@ -132,7 +132,7 @@ final class GameStore: ObservableObject {
         bump()
     }
 
-    /// 채집·요리·선물로 조건이 채워졌으면 잠겨 있던 장을 연다.
+    /// 채집·잼·선물로 조건이 채워졌으면 잠겨 있던 장을 연다.
     func refreshChapterAvailability() {
         if let chapter = engine.refreshChapterAvailability() {
             showToast("\(chapter.shortTitle)이(가) 열렸어요. 숲 지도에서 이어서 걸어가 보세요.")
@@ -275,7 +275,7 @@ final class GameStore: ObservableObject {
         bump()
     }
 
-    // MARK: - 요리
+    // MARK: - 잼
 
     func openCooking() {
         engine.cancelCooking()

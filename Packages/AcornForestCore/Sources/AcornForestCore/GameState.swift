@@ -169,8 +169,8 @@ public struct GameState: Codable, Hashable, Sendable {
 
     /// 새 게임을 시작할 때 할머니의 부엌에 남아 있던 재료.
     public static let startingBasket: [ItemStack] = [
-        ItemStack(.acorn, 2),
-        ItemStack(.raspberry, 1)
+        ItemStack(.dewberry, 2),
+        ItemStack(.fireflyNectar, 1)
     ]
 
     // MARK: - 호감도

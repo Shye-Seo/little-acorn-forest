@@ -1,7 +1,7 @@
 import SwiftUI
 import AcornForestCore
 
-/// 숲속 이웃들. 호감도와 소원을 확인하고 요리를 선물한다.
+/// 숲속 이웃들. 호감도와 소원을 확인하고 잼을 선물한다.
 struct NeighboursView: View {
     @EnvironmentObject private var store: GameStore
     @State private var giftingTo: CharacterID?
@@ -43,7 +43,7 @@ struct NeighboursView: View {
                 Text("숲속 이웃")
                     .font(.story(16, weight: .semibold))
                     .foregroundStyle(ForestPalette.ink)
-                Text("요리를 건네면 이야기가 조금씩 열려요")
+                Text("잼을 건네면 이야기가 조금씩 열려요")
                     .font(.story(11))
                     .foregroundStyle(ForestPalette.inkSoft)
             }
@@ -119,11 +119,11 @@ struct NeighboursView: View {
     }
 
     private func tasteLine(for character: CharacterID, knowsTaste: Bool) -> String {
-        guard knowsTaste else { return "좋아하는 요리는 아직 모릅니다." }
+        guard knowsTaste else { return "좋아하는 잼은 아직 모릅니다." }
         guard let favorite = RecipeBook.recipe(id: character.favoriteRecipeID) else {
             return "아직 잘 모릅니다."
         }
-        return "최애 요리 · \(favorite.name) (\(favorite.ingredientLine))"
+        return "최애 잼 · \(favorite.name) (\(favorite.ingredientLine))"
     }
 }
 
@@ -151,7 +151,7 @@ struct GiftSheet: View {
                     .padding(.top, 6)
 
                     if store.giftableRecipes().isEmpty {
-                        Text("아직 만든 요리가 없어요. 부엌에서 먼저 요리해 주세요.")
+                        Text("아직 담근 잼이 없어요. 부엌에서 먼저 잼을 담가 주세요.")
                             .font(.story(13))
                             .foregroundStyle(ForestPalette.inkSoft)
                             .multilineTextAlignment(.center)

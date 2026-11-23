@@ -30,9 +30,9 @@ public enum CharacterID: String, CaseIterable, Codable, Identifiable, Sendable {
     public var personality: String {
         switch self {
         case .tori:
-            return "아침부터 저녁까지 부지런하다. 말이 많고 셈이 빠르지만, 남의 바구니가 비면 자기 도토리를 먼저 내민다."
+            return "아침부터 저녁까지 부지런하다. 말이 많고 셈이 빠르지만, 남의 바구니가 비면 자기 이슬방울 베리를 먼저 내민다."
         case .songi:
-            return "낯을 많이 가려서 말을 걸면 잎 뒤에 숨는다. 대신 자기 정원의 버섯 이름은 전부 외우고 있다."
+            return "낯을 많이 가려서 말을 걸면 잎 뒤에 숨는다. 대신 자기 정원의 별이끼 버섯 이름은 전부 외우고 있다."
         case .mong:
             return "밤에만 눈을 뜨는 서재지기. 감정을 말로 잘 하지 않아서, 다정함은 늘 책갈피에 끼워 두고 산다."
         case .rubi:
@@ -42,28 +42,28 @@ public enum CharacterID: String, CaseIterable, Codable, Identifiable, Sendable {
 
     public var favoriteRecipeID: String {
         switch self {
-        case .tori: return "acorn-pie"
-        case .songi: return "mushroom-soup"
-        case .mong: return "moonlight-tea"
-        case .rubi: return "raspberry-jam"
+        case .tori: return "meteor-berry-compote"
+        case .songi: return "moonshadow-herb-jelly"
+        case .mong: return "starlight-mist-jam"
+        case .rubi: return "firefly-sparkle-jam"
         }
     }
 
     public var likedRecipeIDs: [String] {
         switch self {
-        case .tori: return ["forest-mushroom-pie", "grandma-porridge"]
-        case .songi: return ["forest-mushroom-pie", "grandma-porridge"]
-        case .mong: return ["grandma-porridge"]
-        case .rubi: return ["starlight-cake"]
+        case .tori: return ["firefly-sparkle-jam", "golden-fullmoon-jam"]
+        case .songi: return ["meteor-berry-compote", "starlight-mist-jam"]
+        case .mong: return ["dawn-dew-jam"]
+        case .rubi: return ["cloud-cotton-marmalade"]
         }
     }
 
     public var dislikedRecipeIDs: [String] {
         switch self {
-        case .tori: return ["moonlight-tea"]
-        case .songi: return ["starlight-cake"]
-        case .mong: return ["forest-mushroom-pie"]
-        case .rubi: return ["grandma-porridge"]
+        case .tori: return ["moonshadow-herb-jelly"]
+        case .songi: return ["firefly-sparkle-jam"]
+        case .mong: return ["meteor-berry-compote"]
+        case .rubi: return ["dawn-dew-jam"]
         }
     }
 
@@ -71,7 +71,7 @@ public enum CharacterID: String, CaseIterable, Codable, Identifiable, Sendable {
     public var wish: String {
         switch self {
         case .tori:
-            return "잔뜩 모은 도토리를 누군가와 나눠 먹는 저녁"
+            return "잔뜩 모은 베리로 콩포트를 끓여 누군가와 나눠 먹는 저녁"
         case .songi:
             return "정원에 이름을 붙여 주는 사람"
         case .mong:
@@ -83,7 +83,7 @@ public enum CharacterID: String, CaseIterable, Codable, Identifiable, Sendable {
 
     public var portraitNote: String {
         switch self {
-        case .tori: return "볼주머니에 도토리를 두 개 넣고 다닌다."
+        case .tori: return "볼주머니에 이슬방울 베리를 두 알 넣고 다닌다."
         case .songi: return "등의 가시에 잎사귀가 한 장 걸려 있다."
         case .mong: return "목에 두른 목도리는 스스로 짠 것."
         case .rubi: return "꼬리 끝이 늘 살짝 젖어 있다."

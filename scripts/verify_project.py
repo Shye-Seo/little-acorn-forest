@@ -395,15 +395,18 @@ recipes = {}
 for rid, name, ingredients in recipe_blocks:
     items = re.findall(r"\.(\w+)", ingredients)
     recipes[rid] = (name, tuple(sorted(items)))
-check("레시피 6종 이상", len(recipes) >= 6, f"{len(recipes)}종")
+INGREDIENTS = {"dewberry", "fireflyNectar", "starMossShroom", "moonflakeSpice"}
+SIGNATURE_JAM = "golden-fullmoon-jam"
+
+check("레시피 7종", len(recipes) == 7, f"{len(recipes)}종")
 check("레시피 id 중복 없음", len(recipe_blocks) == len(recipes))
 check("모든 레시피 2~3가지 재료", all(2 <= len(v[1]) <= 3 for v in recipes.values()),
       str({k: v[1] for k, v in recipes.items()}))
 combos = [v[1] for v in recipes.values()]
 check("조합 중복 없음", len(combos) == len(set(combos)), str(combos))
 check("모든 레시피 재료가 실제 재료", all(
-    set(v[1]) <= {"raspberry", "acorn", "honeyMushroom", "moonHerb"} for v in recipes.values()))
-check("축제 케이크 존재", "starlight-cake" in recipes)
+    set(v[1]) <= INGREDIENTS for v in recipes.values()))
+check("축제 시그니처 잼 존재", SIGNATURE_JAM in recipes)
 
 min_chapters = re.findall(r"minChapter: \.(\w+)", recipe_text)
 check("레시피 등장 장이 유효", bool(min_chapters) and set(min_chapters) <= set(chapters), str(set(min_chapters)))
@@ -483,7 +486,7 @@ too_many_choices = [s["id"] for s in scenes if len(s["choices"]) > 4]
 check("장면당 선택지 4개 이하", not too_many_choices, str(too_many_choices))
 
 bad_grants = [(s["id"], ing, n) for s in scenes for ing, n in s["grants"]
-              if ing not in {"raspberry", "acorn", "honeyMushroom", "moonHerb"} or int(n) <= 0]
+              if ing not in INGREDIENTS or int(n) <= 0]
 check("장면 보상이 실제 재료/양수", not bad_grants, str(bad_grants))
 
 # 일기장 참조 확인
@@ -602,14 +605,14 @@ check("연속 배율 상한 2배", abs((1 + streak_cap * streak_step) - 2.0) < 1
 check("황금 재료 확률 0~1", 0 < golden_chance < 0.5, str(golden_chance))
 
 points_per = {ing: int(v) for ing, v in re.findall(r"case \.(\w+): return (\d+)", read(CORE_DIR / "Models/Ingredient.swift"))}
-check("재료별 채집 점수 4종", len(points_per) >= 4, str(points_per))
+check("재료별 채집 점수 4종", set(points_per) == INGREDIENTS, str(points_per))
 
 
 def gathering_score(catches: int, golden: int = 0) -> int:
     score, streak = 0, 0
     for index in range(catches):
         multiplier = 1 + min(streak, streak_cap) * streak_step
-        base = points_per["raspberry"] * (2 if index < golden else 1)
+        base = points_per["dewberry"] * (2 if index < golden else 1)
         score += int(round(base * multiplier))
         streak += 1
     return score
@@ -643,7 +646,7 @@ def chapter_unlock(chapter: str, state: dict) -> bool:
         return done("chapterTwo") and greeted == 4 and state["recipes"] >= 3
     if chapter == "epilogue":
         close_count = sum(1 for v in state["affinity"].values() if v >= close_threshold)
-        return (done("chapterThree") and "starlight-cake" in state["cookedIDs"] and close_count == 4)
+        return (done("chapterThree") and SIGNATURE_JAM in state["cookedIDs"] and close_count == 4)
     return False
 
 
@@ -657,9 +660,9 @@ stage2 = dict(stage1, status={**stage1["status"], "chapterTwo": "completed"}, re
               affinity={c: greeting_threshold for c in characters})
 check("인사4명+요리3이면 3장 열림", chapter_unlock("chapterThree", stage2))
 stage3 = dict(stage2, status={**stage2["status"], "chapterThree": "completed"},
-              cookedIDs={"starlight-cake"}, affinity={c: close_threshold for c in characters})
-check("케이크+단짝4명이면 에필로그 열림", chapter_unlock("epilogue", stage3))
-check("케이크 없으면 에필로그 잠김", not chapter_unlock("epilogue", dict(stage3, cookedIDs=set())))
+              cookedIDs={SIGNATURE_JAM}, affinity={c: close_threshold for c in characters})
+check("황금 보름달 잼+단짝4명이면 에필로그 열림", chapter_unlock("epilogue", stage3))
+check("시그니처 잼 없으면 에필로그 잠김", not chapter_unlock("epilogue", dict(stage3, cookedIDs=set())))
 
 # 일기장 기대 수량
 expected_diary = len(recipes) + len(characters) * 2 + len(chapters) + 1
@@ -682,13 +685,24 @@ if readme_path.exists():
         ("아키텍처", ["아키텍처"]),
         ("실행 방법", ["xcodegen", "open LittleAcornForest.xcodeproj"]),
         ("캐릭터 이름", ["토리", "송이", "몽", "루비", "보리"]),
-        ("요리 이름", ["도토리 파이", "산딸기 잼", "꿀버섯 수프", "달빛 꿀차"]),
+        ("재료 이름", ["이슬방울 베리", "반딧불 꽃꿀", "별이끼 버섯", "달조각 향신료"]),
+        ("레시피 이름", ["새벽이슬 잼", "반딧불 스파클 잼", "별빛 안개 잼", "구름솜 마멀레이드",
+                        "유성우 베리 콩포트", "달그림자 허브 젤리", "황금 보름달 잼"]),
+        ("판타지 섹션", ["주요 판타지 재료"]),
         ("번들 ID", ["com.quoguri.moonlightjamjar.app"]),
         ("앱 이름", ["달빛 잼 항아리", "Moonlight Jam Jar"]),
     ]
     for label, needles in required:
         missing = [n for n in needles if n not in readme]
         check(f"README: {label}", not missing, str(missing))
+
+    # README가 실제로 존재하는 일러스트를 가리키는지
+    image_refs = re.findall(r"!\[[^\]]*\]\((docs/images/[^)\s]+)\)", readme)
+    check("README: 일러스트 2장 이상", len(set(image_refs)) >= 2, str(sorted(set(image_refs))))
+    missing_images = [ref for ref in set(image_refs) if not (ROOT / ref).exists()]
+    check("README: 일러스트 파일 존재", not missing_images, str(missing_images))
+    for name in ("docs/images/characters.png", "docs/images/fantasy-items.png"):
+        check(f"README: {name} 포함", name in image_refs)
 else:
     fail("README 내용", "README.md 없음")
 

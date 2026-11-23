@@ -86,7 +86,7 @@ public enum ForestDiary {
         list.append(DiaryEntry(
             id: festivalEntryID,
             title: "별빛 축제의 밤",
-            body: "네 사람의 소원이 한 식탁에 모였다. 케이크 위의 달빛허브가 촛불처럼 흔들리고, 숲 전체가 같은 숨을 쉬었다.",
+            body: "네 사람의 소원이 한 식탁에 모였다. 황금 보름달 잼의 뚜껑 위로 달이 한 번 떠오르고, 숲 전체가 같은 숨을 쉬었다.",
             kind: .festival,
             relatedID: nil
         ))

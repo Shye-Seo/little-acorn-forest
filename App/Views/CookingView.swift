@@ -1,7 +1,7 @@
 import SwiftUI
 import AcornForestCore
 
-/// 솥단지 요리. 재료를 고르고, 은근한 불을 유지해 완성도를 올린다.
+/// 솥단지 잼. 재료를 고르고, 은근한 불을 유지해 완성도를 올린다.
 struct CookingView: View {
     @EnvironmentObject private var store: GameStore
     @State private var selected: [Ingredient] = []
@@ -70,7 +70,7 @@ struct CookingView: View {
                     HStack {
                         SectionLabel(text: "바구니")
                         Spacer()
-                        Text("최대 3가지")
+                        Text("최대 3개")
                             .font(.label(10))
                             .foregroundStyle(ForestPalette.inkSoft)
                     }
@@ -91,12 +91,19 @@ struct CookingView: View {
                             .foregroundStyle(ForestPalette.inkSoft)
                     } else {
                         HStack(spacing: 6) {
-                            ForEach(Array(selected.enumerated()), id: \.offset) { _, ingredient in
-                                Text("\(ingredient.emoji) \(ingredient.title)")
-                                    .font(.label(11))
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 6)
-                                    .background(Capsule().fill(ingredient.tint.opacity(0.16)))
+                            ForEach(selectedGroups, id: \.ingredient) { group in
+                                Button {
+                                    removeOne(group.ingredient)
+                                    Haptics.tap()
+                                } label: {
+                                    Text(group.label)
+                                        .font(.label(11))
+                                        .foregroundStyle(ForestPalette.ink)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 6)
+                                        .background(Capsule().fill(group.ingredient.tint.opacity(0.16)))
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
                         Text(hintLine)
@@ -134,11 +141,11 @@ struct CookingView: View {
 
     private func ingredientButton(_ ingredient: Ingredient) -> some View {
         let count = store.state.count(of: ingredient)
-        let isSelected = selected.contains(ingredient)
-        let canSelect = count > 0 && (isSelected || selected.count < RecipeBook.maximumIngredientCount)
+        let inPot = selected.filter { $0 == ingredient }.count
+        let canAdd = count > inPot && selected.count < RecipeBook.maximumIngredientCount
 
         return Button {
-            toggle(ingredient)
+            add(ingredient)
         } label: {
             VStack(spacing: 4) {
                 Text(ingredient.emoji)
@@ -146,7 +153,7 @@ struct CookingView: View {
                 Text(ingredient.title)
                     .font(.label(11))
                     .foregroundStyle(ForestPalette.ink)
-                Text("×\(count)")
+                Text(inPot > 0 ? "넣음 \(inPot) · 남음 \(count - inPot)" : "×\(count)")
                     .font(.label(10))
                     .foregroundStyle(ForestPalette.inkSoft)
             }
@@ -154,16 +161,33 @@ struct CookingView: View {
             .padding(.vertical, 10)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(isSelected ? ingredient.tint.opacity(0.2) : ForestPalette.parchmentDeep.opacity(0.5))
+                    .fill(inPot > 0 ? ingredient.tint.opacity(0.2) : ForestPalette.parchmentDeep.opacity(0.5))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(isSelected ? ingredient.tint : ForestPalette.pageEdge, lineWidth: isSelected ? 1.6 : 1)
+                    .stroke(inPot > 0 ? ingredient.tint : ForestPalette.pageEdge, lineWidth: inPot > 0 ? 1.6 : 1)
             )
-            .opacity(canSelect ? 1 : 0.4)
+            .opacity(canAdd || inPot > 0 ? 1 : 0.4)
         }
         .buttonStyle(.plain)
-        .disabled(!canSelect && !isSelected)
+        .disabled(!canAdd)
+    }
+
+    /// 솥에 넣은 재료를 종류별로 묶어 보여 준다. (새벽이슬 잼처럼 같은 재료를 두 개 쓰는 조합이 있다)
+    private var selectedGroups: [IngredientGroup] {
+        var order: [Ingredient] = []
+        var counts: [Ingredient: Int] = [:]
+        for ingredient in selected {
+            if counts[ingredient] == nil { order.append(ingredient) }
+            counts[ingredient, default: 0] += 1
+        }
+        return order.map { IngredientGroup(ingredient: $0, count: counts[$0] ?? 0) }
+    }
+
+    private var selectedLine: String {
+        selectedGroups.map { group in
+            group.count > 1 ? "\(group.ingredient.title) ×\(group.count)" : group.ingredient.title
+        }.joined(separator: " + ")
     }
 
     private var hintLine: String {
@@ -171,19 +195,23 @@ struct CookingView: View {
             return "수첩에서 본 조합 같아요."
         }
         if selected.count < 2 {
-            return "두 가지는 있어야 요리다워요."
+            return "재료는 두 개부터. 같은 재료를 두 번 넣어도 괜찮아요."
         }
         return "수첩에 없는 조합이에요. 그래도 솥단지는 뭐든 품어 줍니다."
     }
 
-    private func toggle(_ ingredient: Ingredient) {
-        if let index = selected.firstIndex(of: ingredient) {
-            selected.remove(at: index)
-            return
-        }
-        guard store.state.count(of: ingredient) > 0,
+    private func add(_ ingredient: Ingredient) {
+        let inPot = selected.filter { $0 == ingredient }.count
+        guard store.state.count(of: ingredient) > inPot,
               selected.count < RecipeBook.maximumIngredientCount else { return }
         selected.append(ingredient)
+        Haptics.tap()
+    }
+
+    private func removeOne(_ ingredient: Ingredient) {
+        if let index = selected.lastIndex(of: ingredient) {
+            selected.remove(at: index)
+        }
     }
 
     // MARK: - 불 조절
@@ -221,9 +249,7 @@ struct CookingView: View {
             .padding(.horizontal, 22)
 
             HStack(spacing: 10) {
-                Text(selected.map(\.emoji).joined())
-                    .font(.system(size: 22))
-                Text(selected.map(\.title).joined(separator: " + "))
+                Text(selectedLine)
                     .font(.story(13))
                     .foregroundStyle(ForestPalette.inkSoft)
                     .lineLimit(1)
@@ -327,6 +353,18 @@ struct CookingView: View {
             if cooking.isFinished { return }
             store.tickCooking(1.0 / 30.0)
         }
+    }
+}
+
+/// 솥에 들어간 재료 묶음. 같은 재료를 두 개 넣은 조합을 한 칸으로 보여 준다.
+struct IngredientGroup: Identifiable {
+    let ingredient: Ingredient
+    let count: Int
+
+    var id: String { ingredient.rawValue }
+
+    var label: String {
+        count > 1 ? "\(ingredient.emoji) \(ingredient.title) ×\(count)" : "\(ingredient.emoji) \(ingredient.title)"
     }
 }
 
