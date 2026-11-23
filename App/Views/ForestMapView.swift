@@ -1,0 +1,295 @@
+import SwiftUI
+import AcornForestCore
+
+/// 숲 지도. 장소를 눌러 채집하거나 부엌으로 들어간다.
+struct ForestMapView: View {
+    @EnvironmentObject private var store: GameStore
+
+    var body: some View {
+        VStack(spacing: 8) {
+            header
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 12) {
+                    storyCard
+                    mapCard
+                    goalsCard
+                    statsCard
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 16)
+            }
+            bottomBar
+        }
+        .padding(.top, 6)
+        .onAppear {
+            store.refreshChapterAvailability()
+        }
+    }
+
+    private var header: some View {
+        HStack(alignment: .center, spacing: 10) {
+            Button {
+                store.goToTitle()
+            } label: {
+                Image(systemName: "book.closed")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(ForestPalette.sage)
+                    .frame(width: 36, height: 36)
+                    .background(Circle().fill(ForestPalette.parchment.opacity(0.9)))
+            }
+            .buttonStyle(.plain)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(store.chapterTitle)
+                    .font(.story(17, weight: .semibold))
+                    .foregroundStyle(ForestPalette.ink)
+                    .lineLimit(1)
+                Text(store.chapterSubtitle)
+                    .font(.story(11))
+                    .foregroundStyle(ForestPalette.inkSoft)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            Text(AppText.percent(store.completionRatio))
+                .font(.label(12))
+                .foregroundStyle(ForestPalette.sage)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Capsule().fill(ForestPalette.sage.opacity(0.12)))
+        }
+        .padding(.horizontal, 16)
+    }
+
+    private var storyCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                SectionLabel(text: "이야기")
+                Spacer()
+                if let chapter = store.engine.currentChapter {
+                    Text(AppText.statusLabel(store.engine.status(of: chapter)))
+                        .font(.label(10))
+                        .foregroundStyle(ForestPalette.inkSoft)
+                }
+            }
+            Text(store.nextGoalLine)
+                .font(.story(15))
+                .foregroundStyle(ForestPalette.ink)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 8) {
+                PlayerPortrait(size: 58)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("보리")
+                        .font(.story(15, weight: .semibold))
+                        .foregroundStyle(ForestPalette.ink)
+                    Text("할머니의 오두막을 물려받은 사람")
+                        .font(.story(11))
+                        .foregroundStyle(ForestPalette.inkSoft)
+                }
+                Spacer()
+            }
+
+            Button(store.storyButtonTitle) {
+                Haptics.tap()
+                store.startOrResumeStory()
+            }
+            .buttonStyle(StorybookButtonStyle())
+            .disabled(!store.canContinueStory)
+            .opacity(store.canContinueStory ? 1 : 0.5)
+        }
+        .storybookCard()
+    }
+
+    private var mapCard: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                SectionLabel(text: "숲 지도")
+                Spacer()
+                Text("장소를 누르면 움직여요")
+                    .font(.story(10))
+                    .foregroundStyle(ForestPalette.inkSoft)
+            }
+
+            GeometryReader { geo in
+                ZStack {
+                    ForestMapCanvas(unlocked: unlockedSet)
+                    ForEach(ForestLocation.allCases) { location in
+                        Button {
+                            visit(location)
+                        } label: {
+                            LocationNode(
+                                location: location,
+                                locked: !store.isLocationUnlocked(location),
+                                highlighted: location == .festivalGlade && store.state.status(of: .epilogue) != .locked
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .position(
+                            x: geo.size.width * CGFloat(location.mapAnchor.x),
+                            y: geo.size.height * CGFloat(location.mapAnchor.y)
+                        )
+                    }
+                }
+            }
+            .frame(height: 320)
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(ForestPalette.parchmentDeep.opacity(0.55))
+            )
+        }
+        .storybookCard(padding: 14)
+    }
+
+    private var goalsCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SectionLabel(text: "이번 장에서 할 일")
+            if let chapter = store.engine.currentChapter {
+                ForEach(store.engine.goals(for: chapter)) { goal in
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: goal.isMet ? "checkmark.circle.fill" : "circle")
+                            .font(.system(size: 13))
+                            .foregroundStyle(goal.isMet ? ForestPalette.sage : ForestPalette.inkSoft.opacity(0.5))
+                            .padding(.top, 1)
+                        Text(goal.text)
+                            .font(.story(13))
+                            .foregroundStyle(goal.isMet ? ForestPalette.inkSoft : ForestPalette.ink)
+                        Spacer(minLength: 0)
+                    }
+                }
+            } else {
+                Text("이야기가 모두 끝났어요. 숲 일기장을 펼쳐 보세요.")
+                    .font(.story(13))
+                    .foregroundStyle(ForestPalette.inkSoft)
+            }
+        }
+        .storybookCard()
+    }
+
+    private var statsCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SectionLabel(text: "숲의 기록")
+            Text(store.progressLine)
+                .font(.story(13))
+                .foregroundStyle(ForestPalette.ink)
+            Text(store.state.stats.summaryLine)
+                .font(.story(12))
+                .foregroundStyle(ForestPalette.inkSoft)
+            ProgressBar(
+                value: Double(store.diaryEntriesUnlocked) / Double(max(1, ForestDiary.totalCount)),
+                tint: ForestPalette.terracotta
+            )
+            Text("일기장 \(store.diaryEntriesUnlocked)/\(ForestDiary.totalCount) 칸")
+                .font(.label(10))
+                .foregroundStyle(ForestPalette.inkSoft)
+        }
+        .storybookCard()
+    }
+
+    private var bottomBar: some View {
+        HStack(spacing: 10) {
+            Button {
+                store.openNeighbours()
+            } label: {
+                Label("이웃", systemImage: "heart")
+            }
+            .buttonStyle(QuietButtonStyle(tint: ForestPalette.terracotta))
+
+            Button {
+                store.openDiary(from: .map)
+            } label: {
+                Label("일기장", systemImage: "book")
+            }
+            .buttonStyle(QuietButtonStyle())
+
+            Spacer()
+
+            Button {
+                store.saveNow()
+            } label: {
+                Label("저장", systemImage: "leaf")
+            }
+            .buttonStyle(QuietButtonStyle(tint: ForestPalette.inkSoft))
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 8)
+    }
+
+    private var unlockedSet: Set<ForestLocation> {
+        Set(ForestLocation.allCases.filter { store.isLocationUnlocked($0) })
+    }
+
+    private func visit(_ location: ForestLocation) {
+        guard store.isLocationUnlocked(location) else {
+            Haptics.warning()
+            store.showToast("\(location.title)은 아직 열리지 않았어요. 이야기를 더 진행해 주세요.")
+            return
+        }
+        Haptics.tap()
+        if location == .cabinKitchen {
+            store.openCooking()
+        } else {
+            store.openGathering(at: location)
+        }
+    }
+}
+
+struct LocationNode: View {
+    let location: ForestLocation
+    let locked: Bool
+    var highlighted: Bool = false
+
+    var body: some View {
+        VStack(spacing: 3) {
+            ZStack {
+                Circle()
+                    .fill(locked ? ForestPalette.pageEdge.opacity(0.7) : ForestPalette.parchment)
+                    .shadow(color: ForestPalette.ink.opacity(locked ? 0 : 0.14), radius: 6, x: 0, y: 3)
+                Circle()
+                    .stroke(highlighted ? ForestPalette.terracotta : ForestPalette.sage.opacity(locked ? 0.25 : 0.55), lineWidth: highlighted ? 2 : 1.2)
+                Image(systemName: location.symbolName)
+                    .font(.system(size: 19, weight: .medium))
+                    .foregroundStyle(locked ? ForestPalette.inkSoft.opacity(0.45) : ForestPalette.sageDeep)
+            }
+            .frame(width: 50, height: 50)
+
+            Text(location.title)
+                .font(.label(10))
+                .foregroundStyle(locked ? ForestPalette.inkSoft.opacity(0.55) : ForestPalette.ink)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Capsule().fill(ForestPalette.parchment.opacity(0.8)))
+        }
+        .opacity(locked ? 0.85 : 1)
+    }
+}
+
+struct ProgressBar: View {
+    var value: Double
+    var tint: Color = ForestPalette.sage
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule().fill(ForestPalette.pageEdge)
+                Capsule()
+                    .fill(tint)
+                    .frame(width: max(4, geo.size.width * CGFloat(min(1, max(0, value)))))
+            }
+        }
+        .frame(height: 7)
+    }
+}
+
+extension ForestLocation {
+    var symbolName: String {
+        switch self {
+        case .cabinKitchen: return "house.fill"
+        case .berryPatch: return "leaf.fill"
+        case .fireflyPond: return "drop.fill"
+        case .owlLibrary: return "book.fill"
+        case .festivalGlade: return "sparkles"
+        }
+    }
+}
