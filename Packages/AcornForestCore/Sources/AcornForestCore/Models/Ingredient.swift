@@ -105,6 +105,29 @@ public enum Ingredient: String, CaseIterable, Codable, Identifiable, Sendable {
         }
     }
 
+    /// 채집 등급. 드랍표의 비율은 이 등급으로 잡는다.
+    /// 흔한 재료는 잼의 바탕이 되고, 고급·희귀 재료일수록 한 번 더 찾아야 한다.
+    public var tier: IngredientTier {
+        switch self {
+        case .dewberry, .fireflyNectar, .starMossShroom:
+            return .common
+        case .moonflakeSpice, .cherryHoney, .mapleSap:
+            return .refined
+        case .moonlitDew, .snowBlossom:
+            return .rare
+        }
+    }
+
+    /// 달빛이 배어 있는 재료인지. 이웃의 주문서가 '보름달 기운'을 말할 때 쓴다.
+    public var carriesMoonlight: Bool {
+        switch self {
+        case .moonflakeSpice, .moonlitDew, .snowBlossom:
+            return true
+        case .dewberry, .fireflyNectar, .starMossShroom, .cherryHoney, .mapleSap:
+            return false
+        }
+    }
+
     /// 프롤로그~에필로그만 플레이해도 만날 수 없는 재료인지.
     /// 확장 재료는 보름달 정원(무료) 또는 사계절 온실(유료)에서만 나온다.
     public var isExpansionIngredient: Bool {

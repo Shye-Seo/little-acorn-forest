@@ -120,6 +120,33 @@ public struct GameState: Codable, Hashable, Sendable {
     /// 디버그용 '하루 넘기기'로 밀린 날짜.
     public var debugDayShift: Int
 
+    // MARK: 하루 단위 자원
+
+    /// 오늘 남은 달빛 기운. 채집 한 번에 1씩 쓴다.
+    public var moonlightEnergy: Int
+    /// 기운을 마지막으로 채운 날(일련번호). 날이 바뀌면 다시 채운다.
+    public var energyDay: Int
+    /// 오늘 모닥불 집중으로 채운 기운 수.
+    public var focusRecoveries: Int
+    /// 오늘 우체통으로 채운 기운 수.
+    public var letterRecoveries: Int
+    /// 선물 수를 마지막으로 센 날.
+    public var giftDay: Int
+    /// 오늘 이웃별로 건넨 잼 수(character.rawValue 키).
+    public var giftCounts: [String: Int]
+
+    // MARK: 오늘의 주문서
+
+    /// 주문서 누적 점수.
+    public var orderPoints: Int
+    /// 연속으로 맞힌 주문 수.
+    public var orderStreak: Int
+    public var bestOrderStreak: Int
+    /// 지금까지 마친 주문 기록.
+    public var orders: [OrderRecord]
+    /// 열린 선반 장식(OrderTrophy raw value).
+    public var orderTrophies: [String]
+
     public init(startedAt: Date = Date()) {
         self.formatVersion = GameState.currentFormatVersion
         self.chapters = StoryChapter.ordered.map {
@@ -146,6 +173,17 @@ public struct GameState: Codable, Hashable, Sendable {
         self.talkedCharacters = []
         self.debugMoonOverride = nil
         self.debugDayShift = 0
+        self.moonlightEnergy = GatherBalance.maxEnergy
+        self.energyDay = 0
+        self.focusRecoveries = 0
+        self.letterRecoveries = 0
+        self.giftDay = 0
+        self.giftCounts = [:]
+        self.orderPoints = 0
+        self.orderStreak = 0
+        self.bestOrderStreak = 0
+        self.orders = []
+        self.orderTrophies = []
     }
 
     // MARK: - 구버전 저장 파일 호환
@@ -156,6 +194,8 @@ public struct GameState: Codable, Hashable, Sendable {
         case jars, mailbox, lastMailCheckDay, purchasedPacks, cabinStyle
         case fireflyDust, focusSessions, focusMinutes, secretRecipes, talkedCharacters
         case debugMoonOverride, debugDayShift
+        case moonlightEnergy, energyDay, focusRecoveries, letterRecoveries, giftDay, giftCounts
+        case orderPoints, orderStreak, bestOrderStreak, orders, orderTrophies
     }
 
     /// 확장 기능이 생기기 전의 저장 파일에도 열리도록, 새 필드는 없으면 기본값으로 채운다.
@@ -185,6 +225,17 @@ public struct GameState: Codable, Hashable, Sendable {
         talkedCharacters = try container.decodeIfPresent([CharacterID].self, forKey: .talkedCharacters) ?? []
         debugMoonOverride = try container.decodeIfPresent(MoonPhase.self, forKey: .debugMoonOverride)
         debugDayShift = try container.decodeIfPresent(Int.self, forKey: .debugDayShift) ?? 0
+        moonlightEnergy = try container.decodeIfPresent(Int.self, forKey: .moonlightEnergy) ?? GatherBalance.maxEnergy
+        energyDay = try container.decodeIfPresent(Int.self, forKey: .energyDay) ?? 0
+        focusRecoveries = try container.decodeIfPresent(Int.self, forKey: .focusRecoveries) ?? 0
+        letterRecoveries = try container.decodeIfPresent(Int.self, forKey: .letterRecoveries) ?? 0
+        giftDay = try container.decodeIfPresent(Int.self, forKey: .giftDay) ?? 0
+        giftCounts = try container.decodeIfPresent([String: Int].self, forKey: .giftCounts) ?? [:]
+        orderPoints = try container.decodeIfPresent(Int.self, forKey: .orderPoints) ?? 0
+        orderStreak = try container.decodeIfPresent(Int.self, forKey: .orderStreak) ?? 0
+        bestOrderStreak = try container.decodeIfPresent(Int.self, forKey: .bestOrderStreak) ?? 0
+        orders = try container.decodeIfPresent([OrderRecord].self, forKey: .orders) ?? []
+        orderTrophies = try container.decodeIfPresent([String].self, forKey: .orderTrophies) ?? []
     }
 
     // MARK: - 챕터
@@ -532,6 +583,93 @@ public struct GameState: Codable, Hashable, Sendable {
         talkedCharacters.append(character)
     }
 
+    // MARK: - 하루 단위 자원(달빛 기운·선물 수)
+
+    /// 날이 바뀌었으면 달빛 기운을 다 채우고, 오늘의 선물 수를 처음부터 센다.
+    @discardableResult
+    public mutating func beginNewDayIfNeeded(_ day: Int) -> Bool {
+        guard day != energyDay else { return false }
+        energyDay = day
+        moonlightEnergy = GatherBalance.maxEnergy
+        focusRecoveries = 0
+        letterRecoveries = 0
+        giftDay = day
+        giftCounts = [:]
+        return true
+    }
+
+    public var canGather: Bool {
+        moonlightEnergy >= GatherBalance.energyPerSession
+    }
+
+    @discardableResult
+    public mutating func spendGatherEnergy() -> Bool {
+        guard canGather else { return false }
+        moonlightEnergy -= GatherBalance.energyPerSession
+        return true
+    }
+
+    /// 모닥불 집중을 마쳤을 때. 하루 상한까지만 기운이 들어온다.
+    @discardableResult
+    public mutating func recoverEnergyFromFocus() -> Bool {
+        guard focusRecoveries < GatherBalance.focusEnergyCap, moonlightEnergy < GatherBalance.maxEnergy else {
+            return false
+        }
+        focusRecoveries += 1
+        moonlightEnergy = min(GatherBalance.maxEnergy, moonlightEnergy + GatherBalance.focusEnergy)
+        return true
+    }
+
+    /// 우체통 편지를 받았을 때. 하루 상한까지만 기운이 들어온다.
+    @discardableResult
+    public mutating func recoverEnergyFromLetter() -> Bool {
+        guard letterRecoveries < GatherBalance.letterEnergyCap, moonlightEnergy < GatherBalance.maxEnergy else {
+            return false
+        }
+        letterRecoveries += 1
+        moonlightEnergy = min(GatherBalance.maxEnergy, moonlightEnergy + GatherBalance.letterEnergy)
+        return true
+    }
+
+    /// 주문을 맞혔을 때. 상한 없이 한 칸.
+    @discardableResult
+    public mutating func recoverEnergyFromOrder() -> Bool {
+        guard moonlightEnergy < GatherBalance.maxEnergy else { return false }
+        moonlightEnergy = min(GatherBalance.maxEnergy, moonlightEnergy + GatherBalance.orderEnergy)
+        return true
+    }
+
+    /// 오늘 이 이웃에게 건넨 잼 수.
+    public func giftsGiven(to character: CharacterID, day: Int) -> Int {
+        guard giftDay == day else { return 0 }
+        return giftCounts[character.rawValue] ?? 0
+    }
+
+    public mutating func recordGiftToday(to character: CharacterID, day: Int) {
+        guard giftDay == day else {
+            giftDay = day
+            giftCounts = [:]
+            giftCounts[character.rawValue] = 1
+            return
+        }
+        giftCounts[character.rawValue, default: 0] += 1
+    }
+
+    // MARK: - 오늘의 주문서
+
+    /// 그날 이미 마친 주문.
+    public func order(on day: Int) -> OrderRecord? {
+        orders.first { $0.day == day }
+    }
+
+    public var orderTitle: OrderTitle {
+        OrderTitle.title(for: orderPoints)
+    }
+
+    public var unlockedTrophies: [OrderTrophy] {
+        OrderTrophy.allCases.filter { orderTrophies.contains($0.rawValue) }
+    }
+
     /// 대화를 처음 읽었을 때 호감도를 주고, 단짝 문턱을 넘으면 두 번째 대화를 연다.
     private mutating func unlockDialogueIfNeeded(for character: CharacterID) {
         guard character.isExpansionCharacter else { return }
@@ -574,5 +712,23 @@ public struct GameState: Codable, Hashable, Sendable {
         focusSessions = max(0, focusSessions)
         focusMinutes = max(0, focusMinutes)
         debugDayShift = max(0, debugDayShift)
+        moonlightEnergy = min(GatherBalance.maxEnergy, max(0, moonlightEnergy))
+        focusRecoveries = max(0, focusRecoveries)
+        letterRecoveries = max(0, letterRecoveries)
+        giftCounts = giftCounts.filter { $0.value > 0 }
+        orderPoints = max(0, orderPoints)
+        orderStreak = max(0, orderStreak)
+        bestOrderStreak = max(orderStreak, max(0, bestOrderStreak))
+        orders = orders
+            .filter { $0.day > 0 }
+            .reduce(into: [OrderRecord]()) { result, record in
+                guard !result.contains(where: { $0.day == record.day }) else { return }
+                result.append(record)
+            }
+            .suffix(120)
+            .map { $0 }
+        orderTrophies = Array(Set(orderTrophies)).filter { id in
+            OrderTrophy.allCases.contains { $0.rawValue == id }
+        }.sorted()
     }
 }

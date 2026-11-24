@@ -11,8 +11,35 @@ public struct GiftOutcome: Sendable, Equatable {
     public let levelAfter: AffinityLevel
     public let unlockedDiary: [String]
     public let message: String
+    /// 같은 날 몇 번째 잼인지에 따른 호감도 비율(1.0이면 온전히).
+    public let factor: Double
+
+    public init(succeeded: Bool,
+                character: CharacterID,
+                recipe: Recipe?,
+                quality: CookingQuality,
+                gain: Int,
+                levelBefore: AffinityLevel,
+                levelAfter: AffinityLevel,
+                unlockedDiary: [String],
+                message: String,
+                factor: Double = 1) {
+        self.succeeded = succeeded
+        self.character = character
+        self.recipe = recipe
+        self.quality = quality
+        self.gain = gain
+        self.levelBefore = levelBefore
+        self.levelAfter = levelAfter
+        self.unlockedDiary = unlockedDiary
+        self.message = message
+        self.factor = factor
+    }
 
     public var didLevelUp: Bool { levelAfter > levelBefore }
+
+    /// 오늘 이미 한 번 나눠 먹어서 반가움이 작았는지.
+    public var wasDiminished: Bool { factor < 1 }
 }
 
 /// 게임의 두뇌. 화면은 이 객체만 알면 되고, 규칙은 모두 여기에 있다.
@@ -21,6 +48,8 @@ public final class GameEngine {
     public private(set) var state: GameState
     public private(set) var gathering: GatheringSession?
     public private(set) var cooking: CookingSession?
+    public private(set) var simmer: SimmerMinigame?
+    public private(set) var simmerResult: SimmerOutcome?
     public private(set) var focus: FocusSession?
     public private(set) var lastSavedAt: Date?
     public private(set) var lastMessage: String = ""
@@ -57,6 +86,7 @@ public final class GameEngine {
             || !state.jars.isEmpty
             || !state.purchasedPacks.isEmpty
             || state.focusSessions > 0
+            || !state.orders.isEmpty
     }
 
     @discardableResult
@@ -82,6 +112,8 @@ public final class GameEngine {
             pendingReply = nil
             gathering = nil
             cooking = nil
+            simmer = nil
+            simmerResult = nil
             focus = nil
             lastMessage = "이야기를 이어 갑니다."
             return true
@@ -94,11 +126,22 @@ public final class GameEngine {
         }
     }
 
+    /// 하루가 바뀌었으면 달빛 기운을 다시 채운다. 화면이 들어올 때마다 불러도 안전하다.
+    @discardableResult
+    public func refreshDailyState() -> Bool {
+        let today = state.currentDay(at: now())
+        guard state.beginNewDayIfNeeded(today) else { return false }
+        autoSave()
+        return true
+    }
+
     public func startNewGame() {
         state = GameEngine.freshState()
         pendingReply = nil
         gathering = nil
         cooking = nil
+        simmer = nil
+        simmerResult = nil
         focus = nil
         lastMessage = "할머니의 오두막 앞에 도착했어요."
         saveNow()
@@ -110,6 +153,9 @@ public final class GameEngine {
         pendingReply = nil
         gathering = nil
         cooking = nil
+        simmer = nil
+        simmerResult = nil
+        focus = nil
         lastSavedAt = nil
         lastMessage = ""
     }
@@ -473,6 +519,7 @@ public final class GameEngine {
 
     @discardableResult
     public func startGathering(at location: ForestLocation, seed: UInt64? = nil) -> Bool {
+        refreshDailyState()
         if let pack = location.requiredPack, !state.owns(pack) {
             lastMessage = "\(location.title)은(는) 「\(pack.displayName)」에서 열려요."
             return false
@@ -485,10 +532,17 @@ public final class GameEngine {
             lastMessage = "여기서는 채집할 것이 없어요."
             return false
         }
+        guard state.spendGatherEnergy() else {
+            lastMessage = "오늘 쓸 달빛 기운을 다 썼어요. 모닥불에 앉아 집중을 마치거나 우체통을 확인하면 기운이 한 칸 돌아오고, 내일 아침에는 다섯 칸이 모두 찹니다."
+            return false
+        }
         let chosenSeed = seed ?? UInt64.random(in: 1...UInt64.max)
         gathering = GatheringSession(location: location, seed: chosenSeed)
         cooking = nil
-        lastMessage = ""
+        simmer = nil
+        simmerResult = nil
+        lastMessage = "달빛 기운 1을 써서 \(location.title)(으)로 향했어요."
+        autoSave()
         return true
     }
 
@@ -521,6 +575,17 @@ public final class GameEngine {
         return summary
     }
 
+    /// 오늘 남은 달빛 기운. 화면에 그대로 보여 준다.
+    public var energyLine: String {
+        "달빛 기운 \(state.moonlightEnergy)/\(GatherBalance.maxEnergy)"
+    }
+
+    public var energyStars: String {
+        let full = max(0, min(GatherBalance.maxEnergy, state.moonlightEnergy))
+        return String(repeating: "●", count: full)
+            + String(repeating: "○", count: max(0, GatherBalance.maxEnergy - full))
+    }
+
     public func cancelGathering() {
         gathering = nil
     }
@@ -538,6 +603,8 @@ public final class GameEngine {
             return false
         }
         cooking = CookingSession(ingredients: ingredients)
+        simmer = nil
+        simmerResult = nil
         lastMessage = ""
         return true
     }
@@ -563,6 +630,63 @@ public final class GameEngine {
         )
     }
 
+    // MARK: - 마무리 불 조절(불 조절 타이밍 미니게임)
+
+    /// 불 앞에서 재료를 익힌 뒤, 솥단지 마무리 단계를 연다.
+    @discardableResult
+    public func startSimmer(seed: UInt64? = nil) -> Bool {
+        guard let cooking else {
+            lastMessage = "솥에 잼이 없어요."
+            return false
+        }
+        guard cooking.isFinished else {
+            lastMessage = "아직 잼이 익지 않았어요. 불을 조금 더 볼까요?"
+            return false
+        }
+        simmerResult = nil
+        simmer = SimmerMinigame(seed: seed ?? UInt64.random(in: 1...UInt64.max))
+        lastMessage = "마무리 불 조절을 시작해요. 바늘이 초록 구간에 올 때 맞는 손짓을 눌러 주세요."
+        return true
+    }
+
+    public func tickSimmer(_ delta: Double) {
+        simmer?.tick(delta)
+    }
+
+    @discardableResult
+    public func pressSimmer(_ action: SimmerAction) -> SimmerPressResult {
+        guard let result = simmer?.press(action) else { return .ignored }
+        if simmer?.isFinished == true {
+            simmerResult = simmer?.outcome()
+        }
+        if case .fumble(let reason) = result {
+            lastMessage = reason
+        }
+        return result
+    }
+
+    /// 마무리 단계를 마치고 성적을 남긴다. 잼은 아직 솥에 있다.
+    @discardableResult
+    public func finishSimmer() -> SimmerOutcome? {
+        guard let game = simmer else { return nil }
+        let outcome = game.outcome()
+        simmer = nil
+        simmerResult = outcome
+        lastMessage = outcome.message
+        return outcome
+    }
+
+    /// 마무리 단계를 건너뛰고 그냥 익힌다(보너스 없음).
+    public func skipSimmer() {
+        simmer = nil
+        simmerResult = nil
+        lastMessage = "불을 고르게만 유지하고 잼을 그대로 익혔어요."
+    }
+
+    public var simmerReady: Bool {
+        cooking?.isFinished == true && simmer == nil
+    }
+
     @discardableResult
     public func finishCooking() -> CookingOutcome? {
         guard let session = cooking else { return nil }
@@ -570,12 +694,16 @@ public final class GameEngine {
         let attempted = session.ingredients
         let recipe = recipePreview(for: attempted)
         let blessing = MoonBlessing.forPhase(currentMoonPhase)
+        let simmered = simmerResult
 
         for ingredient in attempted {
             state.remove(ingredient)
         }
 
         var quality = baseQuality
+        if let simmered, simmered.grade.qualityStep > 0 {
+            quality = MoonBlessing.upgraded(quality)
+        }
         if blessing.qualityUpgrade {
             quality = MoonBlessing.upgraded(quality)
         }
@@ -588,7 +716,7 @@ public final class GameEngine {
                 recipeID: recipe.id,
                 quality: quality,
                 blessingTag: blessing.tag,
-                extraServings: blessing.bonusServings
+                extraServings: blessing.bonusServings + (simmered?.grade.extraServings ?? 0)
             )
             state.stats.cooks += 1
             if quality == .perfect { state.stats.perfectCooks += 1 }
@@ -603,6 +731,8 @@ public final class GameEngine {
         }
 
         cooking = nil
+        simmer = nil
+        simmerResult = nil
         autoSave()
 
         var message: String
@@ -621,6 +751,13 @@ public final class GameEngine {
             message = "솥단지가 뭉근한 잼이 되었어요. 수첩의 레시피와 맞지 않았어요.\(hint)"
         }
 
+        if let simmered {
+            message += " \(simmered.grade.emoji) \(simmered.grade.title)"
+            if simmered.grade.extraServings > 0 {
+                message += " · 한 접시 더"
+            }
+        }
+
         if blessing.hasEffect {
             message += " \(blessing.phase.emoji) \(blessing.title) — \(blessing.effectLine)"
         }
@@ -633,12 +770,15 @@ public final class GameEngine {
             gainedDiary: gained,
             isNewRecipe: isNew,
             message: message,
-            blessing: blessing
+            blessing: blessing,
+            simmer: simmered
         )
     }
 
     public func cancelCooking() {
         cooking = nil
+        simmer = nil
+        simmerResult = nil
     }
 
     // MARK: - 선물과 호감도
@@ -671,13 +811,19 @@ public final class GameEngine {
             )
         }
 
+        refreshDailyState()
+        let today = state.currentDay(at: now())
+        let giftIndex = state.giftsGiven(to: character, day: today)
+        let factor = AffinitySystem.dailyGiftFactor(forGiftIndex: giftIndex)
         let quality = state.record(for: recipeID)?.bestQuality ?? .good
         let levelBefore = affinityState(for: character).level
         state.consumeServing(recipeID: recipeID)
         let base = AffinitySystem.baseGiftPoints(recipe: recipe, for: character)
-        let gain = base + quality.giftBonus
+        let raw = base + quality.giftBonus
+        let gain = max(1, Int((Double(raw) * factor).rounded()))
         state.addAffinity(gain, to: character)
         state.recordGift(to: character)
+        state.recordGiftToday(to: character, day: today)
         state.stats.gifts += 1
         let unlocked = refreshDiaryMemories()
         let levelAfter = affinityState(for: character).level
@@ -687,8 +833,13 @@ public final class GameEngine {
         if levelAfter > levelBefore {
             message += " · \(levelAfter.title)이 되었어요"
         }
-        if base == 12 {
+        if base == AffinitySystem.favoritePoints {
             message += " · 최애 요리!"
+        }
+        if factor < 1 {
+            message += giftIndex == 1
+                ? " · 오늘 두 번째 잼이라 반가움이 조금 잦아들었어요"
+                : " · 오늘은 이미 여러 번 나눠 먹어서 반가움이 작아요"
         }
         lastMessage = message
 
@@ -701,7 +852,8 @@ public final class GameEngine {
             levelBefore: levelBefore,
             levelAfter: levelAfter,
             unlockedDiary: unlocked,
-            message: message
+            message: message,
+            factor: factor
         )
     }
 
@@ -781,6 +933,7 @@ public final class GameEngine {
     /// 날짜가 바뀌었으면 이웃이 남긴 편지를 받는다.
     @discardableResult
     public func checkMailbox(day: Int? = nil) -> [MailboxLetter] {
+        refreshDailyState()
         let today = day ?? state.currentDay(at: now())
         guard today != state.lastMailCheckDay else { return [] }
 
@@ -823,9 +976,13 @@ public final class GameEngine {
 
         state.mailbox[index].isClaimed = true
         let letter = state.mailbox[index]
+        let recovered = state.recoverEnergyFromLetter()
         lastMessage = parts.isEmpty
             ? "\(letter.sender.name)의 안부를 읽었어요."
             : "\(letter.sender.name)의 편지에서 \(parts.joined(separator: " · "))을(를) 받았어요."
+        if recovered {
+            lastMessage += " · 달빛 기운 +1"
+        }
         autoSave()
         return letter
     }
@@ -834,6 +991,7 @@ public final class GameEngine {
     @discardableResult
     public func simulateNextDay() -> [MailboxLetter] {
         state.debugDayShift += 1
+        _ = refreshDailyState()
         return checkMailbox(day: state.currentDay(at: now()))
     }
 
@@ -890,9 +1048,138 @@ public final class GameEngine {
         state.focusSessions += 1
         state.focusMinutes += session.duration.rawValue
         focus = nil
-        lastMessage = reward.message
+        var message = reward.message
+        if state.recoverEnergyFromFocus() {
+            message += " · 달빛 기운 +1"
+        }
+        lastMessage = message
         autoSave()
-        return reward
+        return FocusReward(
+            duration: reward.duration,
+            track: reward.track,
+            multiplier: reward.multiplier,
+            fireflyDust: reward.fireflyDust,
+            ingredients: reward.ingredients,
+            message: message
+        )
+    }
+
+    // MARK: - 이웃의 오늘의 비밀 주문서
+
+    /// 주문서는 3장을 마치면 열린다.
+    public var orderBoardUnlocked: Bool { DailyOrderBoard.isUnlocked(in: state) }
+
+    /// 오늘의 주문. 아직 열리지 않았으면 nil.
+    public var todaysOrder: DailyOrder? {
+        DailyOrderBoard.order(forDay: state.currentDay(at: now()), in: state)
+    }
+
+    /// 오늘 이미 마친 주문.
+    public var todaysOrderRecord: OrderRecord? {
+        state.order(on: state.currentDay(at: now()))
+    }
+
+    public var orderTitle: OrderTitle { state.orderTitle }
+
+    public var orderTrophies: [OrderTrophy] { state.unlockedTrophies }
+
+    public var orderLine: String {
+        let title = state.orderTitle
+        let done = state.orders.filter(\.matched).count
+        return "\(title.title) · 주문 점수 \(state.orderPoints) · 맞힌 주문 \(done)장"
+    }
+
+    /// 주문서에 낼 수 있는 잼(지금 담가 둔 것).
+    public var orderCandidates: [CookedRecord] {
+        state.cooked.filter { $0.servings > 0 }
+    }
+
+    /// 오늘의 주문에 잼 한 접시를 건넨다.
+    @discardableResult
+    public func deliverOrder(recipeID: String) -> OrderOutcome {
+        refreshDailyState()
+        guard orderBoardUnlocked else {
+            return OrderOutcome(
+                succeeded: false, order: nil, recipeID: recipeID, matched: false,
+                points: 0, streak: state.orderStreak, title: state.orderTitle,
+                newTrophies: [], energyGained: false,
+                message: "주문서는 3장을 마친 뒤에 열려요."
+            )
+        }
+        guard let order = todaysOrder else {
+            return OrderOutcome(
+                succeeded: false, order: nil, recipeID: recipeID, matched: false,
+                points: 0, streak: state.orderStreak, title: state.orderTitle,
+                newTrophies: [], energyGained: false,
+                message: "오늘은 아직 주문서가 비어 있어요."
+            )
+        }
+        let today = state.currentDay(at: now())
+        if let done = state.order(on: today) {
+            return OrderOutcome(
+                succeeded: false, order: order, recipeID: done.recipeID, matched: done.matched,
+                points: 0, streak: state.orderStreak, title: state.orderTitle,
+                newTrophies: [], energyGained: false,
+                message: "오늘 주문은 이미 마쳤어요. 내일 아침에 새 주문서가 걸립니다."
+            )
+        }
+        guard let recipe = RecipeBook.recipe(id: recipeID), state.servings(of: recipeID) > 0 else {
+            return OrderOutcome(
+                succeeded: false, order: order, recipeID: recipeID, matched: false,
+                points: 0, streak: state.orderStreak, title: state.orderTitle,
+                newTrophies: [], energyGained: false,
+                message: "그 잼이 아직 없어요. 부엌에서 먼저 담가 주세요."
+            )
+        }
+
+        let matched = DailyOrderBoard.matches(recipe, clue: order.clue)
+        state.consumeServing(recipeID: recipeID)
+
+        let streakBefore = state.orderStreak
+        let points = matched
+            ? DailyOrderBoard.reward(for: order, streak: streakBefore)
+            : DailyOrderBoard.missPoints
+        state.orderPoints += points
+        if matched {
+            state.orderStreak = streakBefore + 1
+            state.bestOrderStreak = max(state.bestOrderStreak, state.orderStreak)
+        } else {
+            state.orderStreak = 0
+        }
+        state.orders.append(OrderRecord(
+            day: today,
+            character: order.character,
+            recipeID: recipeID,
+            matched: matched,
+            points: points
+        ))
+
+        let newTrophies = DailyOrderBoard.newlyUnlockedTrophies(at: state.orderPoints, alreadyOwned: state.orderTrophies)
+        for trophy in newTrophies {
+            state.orderTrophies.append(trophy.rawValue)
+        }
+        let energyGained = matched ? state.recoverEnergyFromOrder() : false
+
+        autoSave()
+
+        var message = DailyOrderBoard.resultLine(order: order, matched: matched, points: points)
+        if energyGained { message += " · 달빛 기운 +1" }
+        for trophy in newTrophies {
+            message += " · \(trophy.emoji) \(trophy.title)을(를) 선반에 걸었어요"
+        }
+        lastMessage = message
+        return OrderOutcome(
+            succeeded: true,
+            order: order,
+            recipeID: recipeID,
+            matched: matched,
+            points: points,
+            streak: state.orderStreak,
+            title: state.orderTitle,
+            newTrophies: newTrophies,
+            energyGained: energyGained,
+            message: message
+        )
     }
 
     // MARK: - 확장팩
@@ -1019,7 +1306,7 @@ public final class GameEngine {
         let completed = state.completedChapters.count
         let total = StoryChapter.allCases.count
         let diary = state.diaryProgress.unlocked
-        return "이야기 \(completed)/\(total) · 일기 \(diary)/\(ForestDiary.totalCount) · 바구니 \(state.totalIngredients)개"
+        return "이야기 \(completed)/\(total) · 일기 \(diary)/\(ForestDiary.totalCount) · 바구니 \(state.totalIngredients)개 · 기운 \(state.moonlightEnergy)/\(GatherBalance.maxEnergy)"
     }
 
     public var nextGoalLine: String {

@@ -285,12 +285,36 @@ struct CookingView: View {
             .disabled(cooking.isFinished)
 
             if cooking.isFinished {
-                Button("완성하기") {
-                    store.finishCooking()
-                    outcome = store.lastCooking
+                if store.simmer != nil || store.lastSimmer != nil {
+                    SimmerPhaseView()
+                        .padding(.horizontal, 4)
+                    if store.simmer == nil {
+                        Button("잼 완성하기") {
+                            store.finishCooking()
+                            outcome = store.lastCooking
+                        }
+                        .buttonStyle(StorybookButtonStyle())
+                        .padding(.horizontal, 40)
+                    }
+                } else {
+                    VStack(spacing: 8) {
+                        Text("솥이 뭉근해졌어요. 마지막 불을 한 번 다스려 볼까요?")
+                            .font(.story(12))
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(ForestPalette.inkSoft)
+                        Button("마무리 불 조절") {
+                            store.startSimmer()
+                        }
+                        .buttonStyle(StorybookButtonStyle())
+                        .padding(.horizontal, 40)
+                        Button("그냥 익혀서 완성하기") {
+                            store.skipSimmer()
+                            store.finishCooking()
+                            outcome = store.lastCooking
+                        }
+                        .buttonStyle(QuietButtonStyle(tint: ForestPalette.inkSoft))
+                    }
                 }
-                .buttonStyle(StorybookButtonStyle())
-                .padding(.horizontal, 40)
             } else {
                 ProgressBar(value: cooking.progress, tint: ForestPalette.terracotta)
                     .padding(.horizontal, 30)
@@ -325,6 +349,25 @@ struct CookingView: View {
                     .multilineTextAlignment(.center)
                     .foregroundStyle(ForestPalette.ink)
                     .fixedSize(horizontal: false, vertical: true)
+
+                if let simmer = outcome.simmer {
+                    VStack(spacing: 3) {
+                        Text("\(simmer.grade.emoji) \(simmer.grade.title) · 마무리 \(simmer.score)/\(simmer.maxScore)")
+                            .font(.label(11))
+                            .foregroundStyle(simmer.grade == .golden ? ForestPalette.sage : ForestPalette.terracotta)
+                        Text(simmer.grade.note)
+                            .font(.story(11))
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(ForestPalette.inkSoft)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(ForestPalette.parchmentDeep.opacity(0.5))
+                    )
+                }
 
                 if let blessing = outcome.blessing, blessing.hasEffect {
                     VStack(spacing: 3) {

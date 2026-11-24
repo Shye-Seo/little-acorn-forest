@@ -105,10 +105,16 @@ final class MoonPhaseTests: XCTestCase {
     func testSecretGardenYieldsMoonlitDewOnFullMoon() {
         var state = TestSupport.stateWithPrologueDone()
         state.markCompleted(.chapterOne)
+        // 희귀 재료는 10%라 한 판에 없을 수도 있다. 여러 시드 중 하나에서 나오는지 먼저 확인한다.
+        let dewSeed = (1...40).first { seed in
+            GatheringSession(location: .moonlitGarden, seed: UInt64(seed))
+                .items.contains { $0.ingredient == .moonlitDew }
+        }
+        XCTAssertNotNil(dewSeed, "달빛 정원 드랍표에 월광 이슬이 있어야 한다")
         let engine = TestSupport.engine(state: state, moon: .fullMoon)
         XCTAssertTrue(engine.isMoonlitGardenOpen)
         XCTAssertTrue(engine.isLocationUnlocked(.moonlitGarden))
-        XCTAssertTrue(engine.startGathering(at: .moonlitGarden, seed: 21))
+        XCTAssertTrue(engine.startGathering(at: .moonlitGarden, seed: UInt64(dewSeed ?? 1)))
         TestSupport.catchEverything(engine)
         XCTAssertGreaterThan(engine.state.count(of: .moonlitDew), 0, "보름달 정원에서는 월광 이슬이 나온다")
         XCTAssertTrue(engine.moonBadgeLine.contains("보름달"))

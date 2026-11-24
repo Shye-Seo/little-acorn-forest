@@ -17,6 +17,7 @@ final class GameStore: ObservableObject {
         case focus
         case store
         case greenhouse
+        case orders
     }
 
     @Published private(set) var screen: Screen = .title
@@ -29,6 +30,8 @@ final class GameStore: ObservableObject {
     @Published private(set) var lastGathering: GatheringSummary?
     @Published private(set) var lastGift: GiftOutcome?
     @Published private(set) var lastReward: FocusReward?
+    @Published private(set) var lastOrder: OrderOutcome?
+    @Published private(set) var lastSimmer: SimmerOutcome?
     @Published private(set) var dialogue: DialogueOutcome?
     @Published private(set) var selectedCharacter: CharacterID?
     @Published private(set) var shelfPreselect: String?
@@ -58,6 +61,8 @@ final class GameStore: ObservableObject {
     var revisionValue: Int { revision }
     var gathering: GatheringSession? { engine.gathering }
     var cooking: CookingSession? { engine.cooking }
+    var simmer: SimmerMinigame? { engine.simmer }
+    var simmerReady: Bool { engine.simmerReady }
 
     var storyChoices: [StoryChoice] { storyStep?.choices ?? [] }
 
@@ -173,6 +178,7 @@ final class GameStore: ObservableObject {
         dialogue = nil
         screen = .map
         refreshChapterAvailability()
+        engine.refreshDailyState()
         bump()
     }
 
@@ -223,6 +229,13 @@ final class GameStore: ObservableObject {
     func openStore() {
         returnScreen = screen
         screen = .store
+        bump()
+    }
+
+    func openOrders() {
+        returnScreen = screen
+        lastOrder = nil
+        screen = .orders
         bump()
     }
 
@@ -318,6 +331,17 @@ final class GameStore: ObservableObject {
 
     // MARK: - 채집
 
+    var moonlightEnergy: Int { state.moonlightEnergy }
+    var maxEnergy: Int { GatherBalance.maxEnergy }
+    var energyStars: String { engine.energyStars }
+    var energyLine: String { engine.energyLine }
+    var canGather: Bool { state.canGather }
+    var energyHint: String {
+        state.canGather
+            ? "채집 한 번에 기운 1을 써요."
+            : "오늘 기운을 다 썼어요. 모닥불 집중이나 우체통으로 한 칸씩 돌아오고, 내일 아침에 다 채워집니다."
+    }
+
     func openGathering(at location: ForestLocation) {
         guard engine.isLocationUnlocked(location) else {
             showToast(engine.lockMessage(for: location))
@@ -402,13 +426,59 @@ final class GameStore: ObservableObject {
 
     func finishCooking() {
         lastCooking = engine.finishCooking()
+        lastSimmer = nil
         if lastCooking?.recipe != nil { Haptics.success() } else { Haptics.warning() }
+        bump()
+    }
+
+    // MARK: - 마무리 불 조절
+
+    func startSimmer() {
+        guard engine.startSimmer() else {
+            showToast(engine.lastMessage)
+            return
+        }
+        lastSimmer = nil
+        Haptics.tap()
+        bump()
+    }
+
+    func tickSimmer(_ delta: Double) {
+        guard engine.simmer != nil else { return }
+        engine.tickSimmer(delta)
+        bump()
+    }
+
+    func pressSimmer(_ action: SimmerAction) {
+        guard engine.simmer != nil else { return }
+        let result = engine.pressSimmer(action)
+        switch result {
+        case .hit(_, let golden):
+            if golden { Haptics.success() } else { Haptics.tap() }
+        case .fumble:
+            Haptics.warning()
+        case .ignored:
+            break
+        }
+        bump()
+    }
+
+    func finishSimmer() {
+        lastSimmer = engine.finishSimmer()
+        if lastSimmer?.grade == .golden { Haptics.success() } else { Haptics.tap() }
+        bump()
+    }
+
+    func skipSimmer() {
+        engine.skipSimmer()
+        lastSimmer = nil
         bump()
     }
 
     func closeCooking() {
         engine.cancelCooking()
         lastCooking = nil
+        lastSimmer = nil
         screen = .map
         bump()
     }
@@ -425,6 +495,47 @@ final class GameStore: ObservableObject {
         let outcome = engine.gift(recipeID: recipeID, to: character)
         lastGift = outcome
         if outcome.succeeded { Haptics.success() } else { Haptics.warning() }
+        showToast(outcome.message)
+        bump()
+    }
+
+    func giftsToday(for character: CharacterID) -> Int {
+        engine.state.giftsGiven(to: character, day: engine.state.currentDay(at: engine.now()))
+    }
+
+    /// 선물 시트에 미리 보여 줄 "오늘 몇 번째 잼인지" 안내.
+    func giftHint(for character: CharacterID) -> String {
+        let index = giftsToday(for: character)
+        if index == 0 { return "오늘 첫 잼이에요. 온전히 반가워할 거예요." }
+        let percent = Int((AffinitySystem.dailyGiftFactor(forGiftIndex: index) * 100).rounded())
+        return "오늘 \(index + 1)번째 잼이라 호감도가 \(percent)%만 올라요. 내일 다시 나눠 주면 좋아요."
+    }
+
+    // MARK: - 이웃의 오늘의 주문서
+
+    var orderBoardUnlocked: Bool { engine.orderBoardUnlocked }
+    var todaysOrder: DailyOrder? { engine.todaysOrder }
+    var todaysOrderRecord: OrderRecord? { engine.todaysOrderRecord }
+    var orderPoints: Int { state.orderPoints }
+    var orderStreak: Int { state.orderStreak }
+    var orderTitle: OrderTitle { engine.orderTitle }
+    var orderTrophies: [OrderTrophy] { engine.orderTrophies }
+    var orderLine: String { engine.orderLine }
+    var orderCandidates: [CookedRecord] { engine.orderCandidates }
+
+    func orderNumberOfAnswers() -> Int {
+        guard let order = engine.todaysOrder else { return 0 }
+        return DailyOrderBoard.matchingRecipes(for: order, in: engine.state).count
+    }
+
+    func deliverOrder(recipeID: String) {
+        let outcome = engine.deliverOrder(recipeID: recipeID)
+        lastOrder = outcome
+        if outcome.succeeded && outcome.matched {
+            Haptics.success()
+        } else if outcome.succeeded {
+            Haptics.warning()
+        }
         showToast(outcome.message)
         bump()
     }

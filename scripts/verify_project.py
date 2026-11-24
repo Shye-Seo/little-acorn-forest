@@ -449,6 +449,9 @@ story_text = read(CORE_DIR / "Story/StoryScript.swift")
 recipe_text = read(CORE_DIR / "Models/Recipe.swift")
 cooking_text = read(CORE_DIR / "Cooking/CookingSession.swift")
 gathering_text = read(CORE_DIR / "Gathering/GatheringSession.swift")
+balance_text = read(CORE_DIR / "Balance/GatherBalance.swift")
+simmer_text = read(CORE_DIR / "Simmer/SimmerMinigame.swift")
+order_text = read(CORE_DIR / "Orders/DailyOrderBoard.swift")
 affinity_text = read(CORE_DIR / "Models/ForestCharacter.swift")
 chapter_text = read(CORE_DIR / "Progress/ChapterRules.swift")
 diary_text = read(CORE_DIR / "Diary/ForestDiary.swift")
@@ -666,16 +669,24 @@ check("젓기 횟수 발생", hold_stirs > 0, str(hold_stirs))
 affinity_enum = read(CORE_DIR / "Models/ForestCharacter.swift")
 levels = {name: int(value) for name, value in
           re.findall(r"case (shy|greeting|close|family) = (\d+)", affinity_enum)}
-check("호감도 단계 파싱", levels == {"shy": 0, "greeting": 20, "close": 45, "family": 70}, str(levels))
+check("호감도 단계 파싱", levels == {"shy": 0, "greeting": 20, "close": 150, "family": 210}, str(levels))
 max_affinity = int(grab(r"public static let maximum = (\d+)", affinity_enum, "maximum"))
-favorite_points = int(grab(r"if recipe\.id == character\.favoriteRecipeID \{ return (\d+) \}", affinity_enum, "favorite"))
-liked_points = int(grab(r"if character\.likedRecipeIDs\.contains\(recipe\.id\) \{ return (\d+) \}", affinity_enum, "liked"))
-disliked_points = int(grab(r"if character\.dislikedRecipeIDs\.contains\(recipe\.id\) \{ return (\d+) \}", affinity_enum, "disliked"))
-neutral_points = int(grab(r"return (\d+)\n    \}", affinity_enum.split("dislikedRecipeIDs.contains")[-1], "neutral") or 0)
+favorite_points = int(grab(r"public static let favoritePoints = (\d+)", affinity_enum, "favorite"))
+liked_points = int(grab(r"public static let likedPoints = (\d+)", affinity_enum, "liked"))
+disliked_points = int(grab(r"public static let dislikedPoints = (\d+)", affinity_enum, "disliked"))
+neutral_points = int(grab(r"public static let neutralPoints = (\d+)", affinity_enum, "neutral") or 0)
+gift_decay = [float(x) for x in re.findall(r"[\d.]+",
+              grab(r"dailyGiftFactors: \[Double\] = \[([^\]]*)\]", affinity_enum, "dailyGiftFactors"))]
 
 check("선물 점수 순서", favorite_points > liked_points > neutral_points > disliked_points,
       f"{favorite_points}/{liked_points}/{neutral_points}/{disliked_points}")
-check("호감도 상한 100", max_affinity == 100)
+check("호감도 상한 240", max_affinity == 240, str(max_affinity))
+check("같은 날 선물 하락폭 4단계", gift_decay == [1.0, 0.5, 0.3, 0.15], str(gift_decay))
+
+
+def swift_round(value: float) -> int:
+    """Swift의 .rounded()와 같은 반올림(0.5는 0에서 먼 쪽)."""
+    return int(math.floor(value + 0.5)) if value >= 0 else -int(math.floor(-value + 0.5))
 
 
 def level_of(points: int) -> str:
@@ -686,10 +697,17 @@ def level_of(points: int) -> str:
     return result
 
 
-check("18 + 최애(12) + 완벽(3) = 단짝 문턱 전", level_of(18 + favorite_points + gift_bonus) == "greeting",
-      str(18 + favorite_points + gift_bonus))
-check("45는 단짝", level_of(levels["close"]) == "close")
-check("100은 가족", level_of(max_affinity) == "family")
+check("최고 선물 한 번으로는 단짝이 안 된다", level_of(favorite_points + gift_bonus) == "shy",
+      str(favorite_points + gift_bonus))
+check("하루 두 번이면 인사하는 사이", level_of(favorite_points + gift_bonus
+                                          + swift_round((favorite_points + gift_bonus) * gift_decay[1])) == "greeting")
+check("150은 단짝", level_of(levels["close"]) == "close")
+check("240은 가족", level_of(max_affinity) == "family")
+
+# 같은 날 네 번 건네면 하루 만에는 단짝이 안 된다는 것을 숫자로 확인한다.
+day_gain = sum(swift_round((favorite_points + gift_bonus) * factor) for factor in gift_decay)
+check("하루 최대 선물로는 단짝 문턱 미만", day_gain < levels["close"], f"{day_gain} < {levels['close']}")
+check("사흘이면 단짝 근처", day_gain * 3 >= levels["close"] * 0.6, str(day_gain * 3))
 
 # 채집
 lane_count = int(grab(r"static let laneCount = (\d+)", gathering_text, "laneCount"))
@@ -697,10 +715,10 @@ catch_window = float(grab(r"static let defaultCatchWindow: Double = ([\d.]+)", g
 miss_penalty = int(grab(r"static let missPenalty = (\d+)", gathering_text, "missPenalty"))
 streak_step = float(grab(r"static let streakStep = ([\d.]+)", gathering_text, "streakStep"))
 streak_cap = int(grab(r"static let streakCap = (\d+)", gathering_text, "streakCap"))
-golden_chance = float(grab(r"goldenRoll < ([\d.]+)", gathering_text, "goldenChance"))
+golden_chance = float(grab(r"public static let goldenChance = ([\d.]+)", balance_text, "goldenChance"))
 check("채집 상수 파싱", lane_count == 3 and catch_window > 0 and miss_penalty > 0)
 check("연속 배율 상한 2배", abs((1 + streak_cap * streak_step) - 2.0) < 1e-9, f"{1 + streak_cap * streak_step}")
-check("황금 재료 확률 0~1", 0 < golden_chance < 0.5, str(golden_chance))
+check("반짝 재료 확률 0~0.1", 0 < golden_chance <= 0.1, str(golden_chance))
 
 points_per = {ing: int(v) for ing, v in re.findall(r"case \.(\w+): return (\d+)", read(CORE_DIR / "Models/Ingredient.swift"))}
 check("재료별 채집 점수 8종", set(points_per) == INGREDIENTS, str(points_per))
@@ -722,9 +740,15 @@ def gathering_score(catches: int, golden: int = 0) -> int:
 check("3연속 점수 증가", gathering_score(3) > gathering_score(2) > gathering_score(1), str(gathering_score(3)))
 
 # 챕터 해금 미러
-caught_needed = int(grab(r"totalCaught >= (\d+)", chapter_text, "caughtNeeded"))
-recipes_needed = [int(x) for x in re.findall(r"cookedRecipeCount >= (\d+)", chapter_text)]
-check("2장 조건 파싱", caught_needed == 4 and recipes_needed and recipes_needed[0] == 1, str(recipes_needed))
+caught_needed = int(grab(r"chapterTwoCatchGoal = (\d+)", chapter_text, "caughtNeeded"))
+recipe_goals = re.findall(r"chapter(Two|Three)RecipeGoal = (\d+)", chapter_text)
+recipes_needed = [int(value) for _, value in recipe_goals]
+check("2장 조건 파싱", caught_needed == 10 and len(recipes_needed) == 2 and recipes_needed[0] == 2,
+      f"{caught_needed} / {recipes_needed}")
+check("3장은 잼 5가지", bool(recipes_needed) and recipes_needed[1] == 5, str(recipes_needed))
+check("시그니처 잼 상수가 실제 레시피",
+      grab(r'signatureRecipeID = "([^"]+)"', chapter_text, "signature") == SIGNATURE_JAM,
+      grab(r'signatureRecipeID = "([^"]+)"', chapter_text, "signature"))
 
 close_threshold = levels["close"]
 greeting_threshold = levels["greeting"]
@@ -741,10 +765,10 @@ def chapter_unlock(chapter: str, state: dict) -> bool:
     if chapter == "chapterOne":
         return done("prologue")
     if chapter == "chapterTwo":
-        return done("chapterOne") and state["caught"] >= caught_needed and state["recipes"] >= 1
+        return done("chapterOne") and state["caught"] >= caught_needed and state["recipes"] >= recipes_needed[0]
     if chapter == "chapterThree":
         greeted = sum(1 for v in state["affinity"].values() if v >= greeting_threshold)
-        return done("chapterTwo") and greeted == 4 and state["recipes"] >= 3
+        return done("chapterTwo") and greeted == 4 and state["recipes"] >= recipes_needed[1]
     if chapter == "epilogue":
         close_count = sum(1 for v in state["affinity"].values() if v >= close_threshold)
         return (done("chapterThree") and SIGNATURE_JAM in state["cookedIDs"] and close_count == 4)
@@ -755,11 +779,15 @@ base_state = {"status": {}, "caught": 0, "recipes": 0,
               "affinity": {c: 0 for c in characters}, "cookedIDs": set()}
 
 check("새 게임에서 2장 잠김", not chapter_unlock("chapterTwo", base_state))
-stage1 = dict(base_state, status={"prologue": "completed", "chapterOne": "completed"}, caught=4, recipes=1)
-check("채집4+요리1이면 2장 열림", chapter_unlock("chapterTwo", stage1))
-stage2 = dict(stage1, status={**stage1["status"], "chapterTwo": "completed"}, recipes=3,
+stage1 = dict(base_state, status={"prologue": "completed", "chapterOne": "completed"},
+              caught=caught_needed, recipes=recipes_needed[0])
+check("재료 10개+잼 2가지면 2장 열림", chapter_unlock("chapterTwo", stage1))
+check("재료가 모자라면 2장 잠김", not chapter_unlock("chapterTwo", dict(stage1, caught=caught_needed - 1)))
+check("잼이 하나뿐이면 2장 잠김", not chapter_unlock("chapterTwo", dict(stage1, recipes=1)))
+stage2 = dict(stage1, status={**stage1["status"], "chapterTwo": "completed"}, recipes=recipes_needed[1],
               affinity={c: greeting_threshold for c in characters})
-check("인사4명+요리3이면 3장 열림", chapter_unlock("chapterThree", stage2))
+check("인사4명+잼 5가지면 3장 열림", chapter_unlock("chapterThree", stage2))
+check("잼이 4가지면 3장 잠김", not chapter_unlock("chapterThree", dict(stage2, recipes=4)))
 stage3 = dict(stage2, status={**stage2["status"], "chapterThree": "completed"},
               cookedIDs={SIGNATURE_JAM}, affinity={c: close_threshold for c in characters})
 check("황금 보름달 잼+단짝4명이면 에필로그 열림", chapter_unlock("epilogue", stage3))
@@ -905,8 +933,8 @@ locations = re.findall(r"^    case (\w+)$", location_text, flags=re.M)
 locations = [loc for loc in locations if loc in {
     "cabinKitchen", "berryPatch", "fireflyPond", "owlLibrary", "festivalGlade", "moonlitGarden", "greenhouse"}]
 check("숲 장소 7곳(기존 5 + 비밀 정원 + 온실)", len(locations) == 7, str(locations))
-garden_pool = grab(r"case \.moonlitGarden: return \[([^\]]*)\]", location_text, "gardenPool")
-green_pool = grab(r"case \.greenhouse: return \[([^\]]*)\]", location_text, "greenhousePool")
+garden_pool = grab(r"case \.moonlitGarden:\s*return \[(.*?)\]", location_text, "gardenPool")
+green_pool = grab(r"case \.greenhouse:\s*return \[(.*?)\]", location_text, "greenhousePool")
 check("비밀 정원에는 월광 이슬", ".moonlitDew" in garden_pool, garden_pool)
 check("온실에는 계절 재료 3종", all(token in green_pool for token in
                                 [".cherryHoney", ".mapleSap", ".snowBlossom"]), green_pool)
@@ -1029,6 +1057,174 @@ check("우체통 버튼에 미확인 배지", "mailBadgeCount" in read(APP_DIR /
 check("선반에서 병 소리 재생", "playJarPop" in read(APP_DIR / "Views/ShelfView.swift"))
 check("집중 타이머 ASMR 재생", "store.startFocus" in read(APP_DIR / "Views/FocusTimerView.swift") and
       "ForestAudio.shared.playAmbient" in read(APP_DIR / "GameStore.swift"))
+
+
+# ---------------------------------------------------------------------------
+# 8) 밸런스·미니게임(드랍표·달빛 기운·마무리 불 조절·오늘의 주문서) 미러링
+# ---------------------------------------------------------------------------
+
+ingredient_text = read(CORE_DIR / "Models/Ingredient.swift")
+gamestate_text = read(CORE_DIR / "GameState.swift")
+
+check("Core 파일 존재: 채집 밸런스", (CORE_DIR / "Balance/GatherBalance.swift").exists())
+check("Core 파일 존재: 마무리 불 조절", (CORE_DIR / "Simmer/SimmerMinigame.swift").exists())
+check("Core 파일 존재: 오늘의 주문서", (CORE_DIR / "Orders/DailyOrderBoard.swift").exists())
+for name in ("BalanceTests", "SimmerMinigameTests", "OrderBoardTests"):
+    check(f"테스트 파일 존재: {name}", any(p.stem == name for p in core_test_files),
+          str([p.name for p in core_test_files]))
+
+# 등급표: 재료 → 등급
+tier_map: dict[str, str] = {}
+for tier in ("common", "refined", "rare"):
+    block = grab(rf"case ([^:]*?):\s*\n\s*return \.{tier}\n", ingredient_text, f"tier.{tier}")
+    for name in re.findall(r"\.(\w+)", block):
+        tier_map[name] = tier
+check("재료 8종 등급 지정", set(tier_map) == INGREDIENTS, str(tier_map))
+check("희귀 재료는 월광 이슬·겨울 눈꽃",
+      {k for k, v in tier_map.items() if v == "rare"} == {"moonlitDew", "snowBlossom"}, str(tier_map))
+
+common_share = float(grab(r"public static let commonShare = ([\d.]+)", balance_text, "commonShare"))
+refined_share = float(grab(r"public static let refinedShare = ([\d.]+)", balance_text, "refinedShare"))
+rare_share = float(grab(r"public static let rareShare = ([\d.]+)", balance_text, "rareShare"))
+two_tier_share = float(grab(r"public static let twoTierCommonShare = ([\d.]+)", balance_text, "twoTierCommonShare"))
+check("등급 비율 68·22·10",
+      abs(common_share - 0.68) < 1e-9 and abs(refined_share - 0.22) < 1e-9 and abs(rare_share - 0.10) < 1e-9,
+      f"{common_share}/{refined_share}/{rare_share}")
+check("등급 비율 합 1", abs(common_share + refined_share + rare_share - 1) < 1e-9)
+check("희귀 재료 없는 곳은 일반 78", abs(two_tier_share - 0.78) < 1e-9, str(two_tier_share))
+
+# 드랍표
+DROP_CASE = re.compile(r"case \.(\w+):\s*\n\s*return \[(.*?)\]", re.S)
+drop_tables: dict[str, list[tuple[str, int]]] = {}
+for location, body in DROP_CASE.findall(location_text):
+    if location not in {loc for loc in locations}:
+        continue
+    entries = re.findall(r"GatherDrop\(\.(\w+), (\d+)\)", body)
+    if entries:
+        drop_tables[location] = [(name, int(weight)) for name, weight in entries]
+
+check("드랍표 7곳 파싱", set(drop_tables) == set(locations), str(sorted(drop_tables)))
+for location, table in drop_tables.items():
+    total = sum(weight for _, weight in table)
+    check(f"드랍표 합 100: {location}", total == 100, f"{total}")
+    shares = {"common": 0.0, "refined": 0.0, "rare": 0.0}
+    for name, weight in table:
+        shares[tier_map.get(name, "common")] += weight / total
+    if shares["rare"] > 0:
+        check(f"드랍표 3단계 밴드: {location}",
+              abs(shares["common"] - common_share) < 1e-6
+              and abs(shares["refined"] - refined_share) < 1e-6
+              and abs(shares["rare"] - rare_share) < 1e-6,
+              str({k: round(v, 3) for k, v in shares.items()}))
+    else:
+        check(f"드랍표 2단계 밴드: {location}",
+              abs(shares["common"] - two_tier_share) < 1e-6
+              and abs(shares["refined"] - refined_share) < 1e-6,
+              str({k: round(v, 3) for k, v in shares.items()}))
+    check(f"고급 비율 20~25%: {location}", 0.20 <= shares["refined"] <= 0.25,
+          f"{shares['refined']:.3f}")
+
+# 달빛 기운
+max_energy = int(grab(r"public static let maxEnergy = (\d+)", balance_text, "maxEnergy"))
+energy_cost = int(grab(r"public static let energyPerSession = (\d+)", balance_text, "energyCost"))
+focus_energy = int(grab(r"public static let focusEnergy = (\d+)", balance_text, "focusEnergy"))
+focus_cap = int(grab(r"public static let focusEnergyCap = (\d+)", balance_text, "focusCap"))
+letter_energy = int(grab(r"public static let letterEnergy = (\d+)", balance_text, "letterEnergy"))
+letter_cap = int(grab(r"public static let letterEnergyCap = (\d+)", balance_text, "letterCap"))
+session_duration = float(grab(r"public static let sessionDuration: Double = ([\d.]+)", balance_text, "sessionDuration"))
+
+sessions_per_day = max_energy // energy_cost
+check("하루 달빛 기운 5", max_energy == 5 and energy_cost == 1, f"{max_energy}/{energy_cost}")
+check("하루 채집 5판", sessions_per_day == 5, str(sessions_per_day))
+check("집중·우체통으로 하루 최대 4판 더",
+      focus_cap * focus_energy + letter_cap * letter_energy == 4,
+      f"{focus_cap * focus_energy}+{letter_cap * letter_energy}")
+check("채집 한 판 20~30초", 20 <= session_duration <= 30, str(session_duration))
+check("기운이 GameState에 저장된다",
+      all(token in gamestate_text for token in
+          ["moonlightEnergy", "beginNewDayIfNeeded", "spendGatherEnergy", "recoverEnergyFromFocus"]),
+      "GameState 필드 누락")
+check("엔진이 기운 없이는 채집을 막는다", "spendGatherEnergy" in engine_text and "달빛 기운" in engine_text)
+
+# 마무리 불 조절
+simmer_duration = float(grab(r"public static let duration: Double = ([\d.]+)", simmer_text, "simmerDuration"))
+simmer_requests = int(grab(r"public static let requestCount = (\d+)", simmer_text, "requestCount"))
+simmer_hit = int(grab(r"public static let hitPoints = (\d+)", simmer_text, "hitPoints"))
+simmer_golden = int(grab(r"public static let goldenPoints = (\d+)", simmer_text, "goldenPoints"))
+simmer_penalty = int(grab(r"public static let fumblePenalty = (\d+)", simmer_text, "fumblePenalty"))
+simmer_golden_threshold = float(grab(r"public static let goldenThreshold: Double = ([\d.]+)", simmer_text, "goldenThreshold"))
+simmer_steady_threshold = float(grab(r"public static let steadyThreshold: Double = ([\d.]+)", simmer_text, "steadyThreshold"))
+
+check("마무리 5번·12초", simmer_requests == 5 and 8 <= simmer_duration <= 20, f"{simmer_requests}/{simmer_duration}")
+check("황금 > 성공 점수", simmer_golden > simmer_hit > simmer_penalty, f"{simmer_golden}/{simmer_hit}/{simmer_penalty}")
+check("등급 문턱 순서", 0 < simmer_steady_threshold < simmer_golden_threshold < 1,
+      f"{simmer_steady_threshold}/{simmer_golden_threshold}")
+
+
+def simmer_grade(score: int) -> str:
+    best = simmer_requests * simmer_golden
+    ratio = score / best
+    if ratio >= simmer_golden_threshold:
+        return "golden"
+    if ratio >= simmer_steady_threshold:
+        return "steady"
+    return "fumbled"
+
+
+check("모두 황금이면 황금빛", simmer_grade(simmer_requests * simmer_golden) == "golden")
+check("모두 놓치면 졸은 솥", simmer_grade(0) == "fumbled")
+check("절반이면 고른 온기", simmer_grade((simmer_requests * simmer_golden) // 2) == "steady")
+check("황금빛만 완성도·접시 보너스",
+      "self == .golden ? 1 : 0" in simmer_text and simmer_text.count("self == .golden ? 1 : 0") == 2)
+check("엔진이 마무리 성적을 요리에 반영",
+      "startSimmer" in engine_text and "simmerResult" in engine_text and "simmer" in cooking_text)
+
+# 오늘의 주문서
+order_base = int(grab(r"public static let basePoints = (\d+)", order_text, "orderBase"))
+order_miss = int(grab(r"public static let missPoints = (\d+)", order_text, "orderMiss"))
+order_min_recipes = int(grab(r"public static let minimumRecipes = (\d+)", order_text, "minimumRecipes"))
+order_streak_cap = int(grab(r"public static let streakBonusCap = (\d+)", order_text, "streakBonusCap"))
+order_unlock = grab(r"public static let unlockChapter: StoryChapter = \.(\w+)", order_text, "orderUnlock")
+title_block = grab(r"public var threshold: Int \{(.*?)\n    \}", order_text, "orderTitleThreshold")
+title_values = [int(v) for v in re.findall(r"return (\d+)", title_block)]
+trophy_thresholds = [int(v) for v in re.findall(r"return (\d+)",
+                     grab(r"public var threshold: Int \{(.*?)\n    \}", order_text.split("public enum OrderTrophy")[-1], "trophyThreshold"))]
+
+check("주문서는 3장 뒤에 열린다", order_unlock == "chapterThree", order_unlock)
+check("주문서 기본 점수 10·빗나감 2", order_base == 10 and order_miss == 2, f"{order_base}/{order_miss}")
+check("주문서는 잼 2가지부터", order_min_recipes == 2, str(order_min_recipes))
+check("칭호 문턱 0·30·90·180", title_values == [0, 30, 90, 180], str(title_values))
+check("장식 문턱 30·90·180", trophy_thresholds == [30, 90, 180], str(trophy_thresholds))
+check("장식은 칭호 문턱과 같이 열린다", title_values[1:] == trophy_thresholds, f"{title_values} / {trophy_thresholds}")
+
+
+def order_reward(warmth: int, moonlit: bool, streak: int) -> int:
+    points = order_base + warmth * 2
+    if moonlit:
+        points += 3
+    points += min(max(0, streak), order_streak_cap)
+    return points
+
+
+check("주문 점수는 온기·달빛·연속으로 늘어난다",
+      order_reward(3, True, 10) > order_reward(2, False, 0) > order_base,
+      f"{order_reward(3, True, 10)} / {order_reward(2, False, 0)}")
+check("연속 보너스 상한", order_reward(1, False, 50) == order_base + 2 + order_streak_cap,
+      str(order_reward(1, False, 50)))
+check("빗나가도 기록은 남는다", order_miss > 0 and "missPoints" in order_text)
+
+# 화면 연결
+for view in ("SimmerMinigameView", "DailyOrderBoardView"):
+    check(f"화면 존재: {view}", any(p.stem == view for p in app_files), str(app_view_files))
+check("화면 전환에 주문서 등록", ".orders: DailyOrderBoardView()" in read(APP_DIR / "LittleAcornForestApp.swift"))
+check("지도에 달빛 기운 표시", "energyStars" in read(APP_DIR / "Views/ForestMapView.swift")
+      and "moonlightEnergy" in read(APP_DIR / "GameStore.swift"))
+check("지도에서 주문서 열기", "openOrders" in read(APP_DIR / "Views/ForestMapView.swift"))
+check("부엌에 마무리 단계 연결", "SimmerPhaseView" in read(APP_DIR / "Views/CookingView.swift")
+      and "startSimmer" in read(APP_DIR / "GameStore.swift"))
+check("선반에 주문 장식 표시", "orderTrophies" in read(APP_DIR / "Views/ShelfView.swift"))
+check("선물 시트에 하루 선물 수 안내", "giftHint" in read(APP_DIR / "Views/NeighboursView.swift"))
+check("채집 화면에 기운 표시", "moonlightEnergy" in read(APP_DIR / "Views/GatheringGameView.swift"))
 
 
 # ---------------------------------------------------------------------------

@@ -43,28 +43,41 @@ final class ChapterProgressTests: XCTestCase {
 
         XCTAssertTrue(engine.startGathering(at: .berryPatch, seed: 21))
         TestSupport.catchEverything(engine)
+        XCTAssertGreaterThanOrEqual(engine.state.stats.totalCaught, ChapterRules.chapterTwoCatchGoal,
+                                    "한 판에서 2장 문턱만큼은 주워야 한다")
         XCTAssertTrue(engine.startCooking(ingredients: [.dewberry, .fireflyNectar]))
         TestSupport.stirToPerfect(engine)
         _ = engine.finishCooking()
+        XCTAssertEqual(engine.state.cookedRecipeCount, 1)
+        XCTAssertFalse(ChapterRules.isUnlocked(.chapterTwo, in: engine.state),
+                       "잼 한 가지로는 2장이 열리지 않는다")
+
+        XCTAssertTrue(engine.startCooking(ingredients: [.dewberry, .starMossShroom]))
+        TestSupport.stirToPerfect(engine)
+        _ = engine.finishCooking()
+        XCTAssertEqual(engine.state.cookedRecipeCount, 2)
 
         XCTAssertTrue(ChapterRules.isUnlocked(.chapterTwo, in: engine.state))
         XCTAssertEqual(engine.status(of: .chapterTwo), .locked, "상태 갱신은 지도 화면에서 일어난다")
     }
 
-    func testChapterThreeNeedsGreetingsAndThreeRecipes() {
+    func testChapterThreeNeedsGreetingsAndFiveRecipes() {
         var state = TestSupport.stateWithPrologueDone()
         state.markCompleted(.chapterOne)
         state.markCompleted(.chapterTwo)
-        state.stats.totalCaught = 10
+        state.stats.totalCaught = 20
         state.addCooked(recipeID: "dawn-dew-jam", quality: .good)
         state.addCooked(recipeID: "firefly-sparkle-jam", quality: .good)
         state.addCooked(recipeID: "starlight-mist-jam", quality: .good)
+        state.addCooked(recipeID: "cloud-cotton-marmalade", quality: .good)
         XCTAssertFalse(ChapterRules.isUnlocked(.chapterThree, in: state))
 
-        for character in CharacterID.allCases {
+        state.addCooked(recipeID: "moonshadow-herb-jelly", quality: .good)
+        for character in CharacterID.coreNeighbours {
             state.addAffinity(20, to: character)
         }
         XCTAssertTrue(ChapterRules.isUnlocked(.chapterThree, in: state))
+        XCTAssertEqual(ChapterRules.chapterThreeRecipeGoal, 5)
     }
 
     func testEpilogueNeedsCakeAndCloseFriends() {
@@ -74,9 +87,14 @@ final class ChapterProgressTests: XCTestCase {
         state.markCompleted(.chapterThree)
         XCTAssertFalse(ChapterRules.isUnlocked(.epilogue, in: state))
 
-        state.addCooked(recipeID: "golden-fullmoon-jam", quality: .perfect)
-        for character in CharacterID.allCases {
-            state.addAffinity(45, to: character)
+        state.addCooked(recipeID: ChapterRules.signatureRecipeID, quality: .perfect)
+        for character in CharacterID.coreNeighbours {
+            state.addAffinity(AffinityLevel.close.rawValue - 1, to: character)
+        }
+        XCTAssertFalse(ChapterRules.isUnlocked(.epilogue, in: state), "단짝 문턱 바로 아래에서는 안 열린다")
+
+        for character in CharacterID.coreNeighbours {
+            state.addAffinity(1, to: character)
         }
         XCTAssertTrue(ChapterRules.isUnlocked(.epilogue, in: state))
     }
@@ -91,7 +109,7 @@ final class ChapterProgressTests: XCTestCase {
         XCTAssertEqual(goals.count, 3)
         XCTAssertTrue(goals.contains { $0.isMet }, "이미 끝난 1장 조건은 충족으로 보여야 한다")
         XCTAssertTrue(goals.allSatisfy { !$0.text.isEmpty })
-        XCTAssertTrue(goals.contains { $0.text.contains("0/4") })
+        XCTAssertTrue(goals.contains { $0.text.contains("0/10") })
     }
 
     func testRefreshUnlocksChapterAfterGatheringAndCooking() {
@@ -102,6 +120,8 @@ final class ChapterProgressTests: XCTestCase {
         XCTAssertTrue(engine.startGathering(at: .berryPatch, seed: 21))
         TestSupport.catchEverything(engine)
         XCTAssertTrue(engine.startCooking(ingredients: [.dewberry, .fireflyNectar]))
+        _ = engine.finishCooking()
+        XCTAssertTrue(engine.startCooking(ingredients: [.dewberry, .starMossShroom]))
         _ = engine.finishCooking()
 
         XCTAssertEqual(engine.refreshChapterAvailability(), .chapterTwo)
@@ -124,11 +144,14 @@ final class ChapterProgressTests: XCTestCase {
         var state = TestSupport.stateWithPrologueDone()
         state.markCompleted(.chapterOne)
         state.markCompleted(.chapterTwo)
-        for character in CharacterID.allCases {
-            state.addAffinity(45, to: character)
+        state.stats.totalCaught = 20
+        for character in CharacterID.coreNeighbours {
+            state.addAffinity(AffinityLevel.close.rawValue, to: character)
         }
-        state.addCooked(recipeID: "golden-fullmoon-jam", quality: .perfect)
-        state.cooked.append(CookedRecord(recipeID: "dawn-dew-jam", servings: 0, timesCooked: 1))
+        state.addCooked(recipeID: ChapterRules.signatureRecipeID, quality: .perfect)
+        for recipeID in ["dawn-dew-jam", "firefly-sparkle-jam", "starlight-mist-jam", "cloud-cotton-marmalade"] {
+            state.addCooked(recipeID: recipeID, quality: .good)
+        }
         state.setStatus(.available, for: .chapterThree)
         state.setStatus(.available, for: .epilogue)
         let engine = TestSupport.engine(state: state)

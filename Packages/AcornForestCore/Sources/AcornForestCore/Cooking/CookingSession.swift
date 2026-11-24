@@ -162,6 +162,8 @@ public struct CookingOutcome: Sendable, Equatable {
     public let message: String
     /// 완성 순간의 달 위상이 남긴 축복. 위상 효과가 있으면 값이 들어온다.
     public let blessing: MoonBlessing?
+    /// 마무리 불 조절(SimmerMinigame)의 성적. 건너뛰었으면 nil.
+    public let simmer: SimmerOutcome?
 
     public init(recipe: Recipe?,
                 attempted: [Ingredient],
@@ -169,7 +171,8 @@ public struct CookingOutcome: Sendable, Equatable {
                 gainedDiary: [String],
                 isNewRecipe: Bool,
                 message: String,
-                blessing: MoonBlessing? = nil) {
+                blessing: MoonBlessing? = nil,
+                simmer: SimmerOutcome? = nil) {
         self.recipe = recipe
         self.attempted = attempted
         self.quality = quality
@@ -177,6 +180,7 @@ public struct CookingOutcome: Sendable, Equatable {
         self.isNewRecipe = isNewRecipe
         self.message = message
         self.blessing = blessing
+        self.simmer = simmer
     }
 
     public var succeeded: Bool { recipe != nil }

@@ -96,7 +96,7 @@ final class GreenhouseTests: XCTestCase {
 
     func testCloseDialogueUnlocksAtCloseLevel() {
         var state = greenhouseState()
-        state.addAffinity(50, to: .coco)
+        state.addAffinity(AffinityLevel.close.rawValue, to: .coco)
         state.markTalked(to: .coco)
         let engine = TestSupport.engine(state: state)
         let scene = engine.talk(to: .coco)

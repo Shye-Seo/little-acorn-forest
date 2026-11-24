@@ -56,7 +56,10 @@ final class ExpansionPersistenceTests: XCTestCase {
         var stateDict = try XCTUnwrap(root["state"] as? [String: Any])
         let newKeys = ["jars", "mailbox", "lastMailCheckDay", "purchasedPacks", "cabinStyle",
                        "fireflyDust", "focusSessions", "focusMinutes", "secretRecipes",
-                       "talkedCharacters", "debugMoonOverride", "debugDayShift"]
+                       "talkedCharacters", "debugMoonOverride", "debugDayShift",
+                       "moonlightEnergy", "energyDay", "focusRecoveries", "letterRecoveries",
+                       "giftDay", "giftCounts", "orderPoints", "orderStreak", "bestOrderStreak",
+                       "orders", "orderTrophies"]
         for key in newKeys {
             stateDict.removeValue(forKey: key)
         }
@@ -77,6 +80,9 @@ final class ExpansionPersistenceTests: XCTestCase {
         XCTAssertEqual(restored.state.servings(of: "dawn-dew-jam"), 1)
         XCTAssertEqual(restored.state.affinityPoints(for: .tori), 24)
         XCTAssertEqual(restored.state.record(for: "dawn-dew-jam")?.blessingTags, [])
+        XCTAssertEqual(restored.state.moonlightEnergy, GatherBalance.maxEnergy, "예전 저장 파일은 기운을 다 채워 열린다")
+        XCTAssertTrue(restored.state.orders.isEmpty)
+        XCTAssertEqual(restored.state.orderPoints, 0)
     }
 
     func testNormalizeRepairsExtensionState() {

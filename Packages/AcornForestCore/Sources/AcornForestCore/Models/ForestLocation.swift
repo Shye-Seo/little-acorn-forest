@@ -43,29 +43,43 @@ public enum ForestLocation: String, CaseIterable, Codable, Identifiable, Sendabl
         }
     }
 
-    /// 이곳에서 떨어지는 재료 후보(많이 적을수록 자주 나온다).
-    public var ingredientPool: [Ingredient] {
+    /// 이곳에서 떨어지는 재료와 무게. 합이 100이면 그대로 %로 읽힌다.
+    /// 등급 비율은 `GatherBalance`가 정한 값을 그대로 따른다
+    /// (희귀 재료가 있는 곳 68·22·10 / 없는 곳 78·22).
+    public var dropTable: [GatherDrop] {
         switch self {
-        case .cabinKitchen: return [.dewberry, .fireflyNectar, .starMossShroom]
-        case .berryPatch: return [.dewberry, .dewberry, .moonflakeSpice]
-        case .fireflyPond: return [.fireflyNectar, .fireflyNectar, .dewberry]
-        case .owlLibrary: return [.moonflakeSpice, .moonflakeSpice, .starMossShroom]
-        case .festivalGlade: return [.dewberry, .fireflyNectar, .starMossShroom, .moonflakeSpice]
-        case .moonlitGarden: return [.moonlitDew, .moonlitDew, .moonflakeSpice]
-        case .greenhouse: return [.cherryHoney, .mapleSap, .snowBlossom, .dewberry]
+        case .cabinKitchen:
+            return [GatherDrop(.dewberry, 48), GatherDrop(.fireflyNectar, 30), GatherDrop(.moonflakeSpice, 22)]
+        case .berryPatch:
+            return [GatherDrop(.dewberry, 56), GatherDrop(.starMossShroom, 22), GatherDrop(.moonflakeSpice, 22)]
+        case .fireflyPond:
+            return [GatherDrop(.fireflyNectar, 50), GatherDrop(.dewberry, 28), GatherDrop(.moonflakeSpice, 22)]
+        case .owlLibrary:
+            return [GatherDrop(.starMossShroom, 46), GatherDrop(.dewberry, 20), GatherDrop(.fireflyNectar, 12), GatherDrop(.moonflakeSpice, 22)]
+        case .festivalGlade:
+            return [GatherDrop(.dewberry, 30), GatherDrop(.fireflyNectar, 26), GatherDrop(.starMossShroom, 22), GatherDrop(.moonflakeSpice, 22)]
+        case .moonlitGarden:
+            return [GatherDrop(.dewberry, 34), GatherDrop(.starMossShroom, 34), GatherDrop(.moonflakeSpice, 22), GatherDrop(.moonlitDew, 10)]
+        case .greenhouse:
+            return [GatherDrop(.dewberry, 68), GatherDrop(.cherryHoney, 11), GatherDrop(.mapleSap, 11), GatherDrop(.snowBlossom, 10)]
         }
     }
 
-    /// 재료가 떨어지는 간격(초).
+    /// 이곳에서 나올 수 있는 재료만 모은 목록(무게 무시).
+    public var ingredientPool: [Ingredient] {
+        dropTable.map(\.ingredient)
+    }
+
+    /// 재료가 떨어지는 간격(초). 길게 잡을수록 한 판에 줍는 양이 줄어든다.
     public var spawnInterval: ClosedRange<Double> {
         switch self {
-        case .cabinKitchen: return 1.15...1.55
-        case .berryPatch: return 0.95...1.35
-        case .fireflyPond: return 1.05...1.45
-        case .owlLibrary: return 1.25...1.70
-        case .festivalGlade: return 0.85...1.20
-        case .moonlitGarden: return 1.00...1.40
-        case .greenhouse: return 0.95...1.35
+        case .cabinKitchen: return 1.45...1.95
+        case .berryPatch: return 1.30...1.75
+        case .fireflyPond: return 1.35...1.80
+        case .owlLibrary: return 1.50...2.00
+        case .festivalGlade: return 1.20...1.65
+        case .moonlitGarden: return 1.30...1.75
+        case .greenhouse: return 1.30...1.80
         }
     }
 

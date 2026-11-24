@@ -168,6 +168,33 @@ struct ShelfView: View {
                     slotView(slot)
                 }
             }
+
+            if !store.orderTrophies.isEmpty {
+                Divider().opacity(0.5)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("주문서로 받은 장식")
+                        .font(.label(10))
+                        .foregroundStyle(ForestPalette.inkSoft)
+                    HStack(spacing: 10) {
+                        ForEach(store.orderTrophies) { trophy in
+                            VStack(spacing: 2) {
+                                Text(trophy.emoji)
+                                    .font(.system(size: 20))
+                                Text(trophy.title)
+                                    .font(.label(8))
+                                    .foregroundStyle(ForestPalette.inkSoft)
+                                    .lineLimit(1)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(ForestPalette.butter.opacity(0.4))
+                            )
+                        }
+                    }
+                }
+            }
         }
         .storybookCard()
         .background(

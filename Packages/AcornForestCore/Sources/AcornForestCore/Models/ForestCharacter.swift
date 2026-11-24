@@ -131,11 +131,13 @@ public enum CharacterID: String, CaseIterable, Codable, Identifiable, Sendable {
 }
 
 /// 이웃의 호감도 단계.
+/// 문턱을 높게 잡은 이유: 한두 번의 잼으로는 가까워지지 않고,
+/// 여러 날에 걸쳐 잼을 나눠 먹어야 단짝이 된다.
 public enum AffinityLevel: Int, Codable, CaseIterable, Comparable, Sendable {
     case shy = 0
     case greeting = 20
-    case close = 45
-    case family = 70
+    case close = 150
+    case family = 210
 
     public var title: String {
         switch self {
@@ -170,7 +172,18 @@ public enum AffinityLevel: Int, Codable, CaseIterable, Comparable, Sendable {
 }
 
 public enum AffinitySystem {
-    public static let maximum = 100
+    public static let maximum = 240
+
+    /// 같은 날 한 이웃에게 잼을 여러 번 건내면 반가움이 조금씩 잦아든다.
+    /// 첫 잼은 온전히, 그 뒤로는 이 비율만큼만 호감도가 오른다.
+    public static let dailyGiftFactors: [Double] = [1.0, 0.5, 0.3, 0.15]
+
+    /// 그날 몇 번째 잼인지(0부터)에 따른 호감도 비율.
+    public static func dailyGiftFactor(forGiftIndex index: Int) -> Double {
+        guard index > 0 else { return 1 }
+        if index < dailyGiftFactors.count { return dailyGiftFactors[index] }
+        return dailyGiftFactors[dailyGiftFactors.count - 1]
+    }
 
     public static func level(for points: Int) -> AffinityLevel {
         let clamped = max(0, min(maximum, points))
@@ -182,11 +195,16 @@ public enum AffinitySystem {
     }
 
     /// 선물 점수. 최애 요리 > 좋아하는 요리 > 무난한 요리 > 싫어하는 요리 순.
+    public static let favoritePoints = 12
+    public static let likedPoints = 7
+    public static let neutralPoints = 3
+    public static let dislikedPoints = 1
+
     public static func baseGiftPoints(recipe: Recipe, for character: CharacterID) -> Int {
-        if recipe.id == character.favoriteRecipeID { return 12 }
-        if character.likedRecipeIDs.contains(recipe.id) { return 7 }
-        if character.dislikedRecipeIDs.contains(recipe.id) { return 1 }
-        return 3
+        if recipe.id == character.favoriteRecipeID { return favoritePoints }
+        if character.likedRecipeIDs.contains(recipe.id) { return likedPoints }
+        if character.dislikedRecipeIDs.contains(recipe.id) { return dislikedPoints }
+        return neutralPoints
     }
 
     /// 대화 선택지로 오르는 호감도도 같은 상한을 쓴다.

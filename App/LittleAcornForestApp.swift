@@ -37,6 +37,7 @@ struct RootView: View {
                 case .focus: FocusTimerView()
                 case .store: StoreView()
                 case .greenhouse: GreenhouseView()
+                case .orders: DailyOrderBoardView()
                 }
             }
             .transition(.opacity)

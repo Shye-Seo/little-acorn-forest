@@ -12,6 +12,7 @@ struct ForestMapView: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 12) {
                     storyCard
+                    energyCard
                     mapCard
                     goalsCard
                     statsCard
@@ -70,6 +71,33 @@ struct ForestMapView: View {
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 16)
+    }
+
+    /// 오늘 남은 달빛 기운. 채집을 누르기 전에 한눈에 보인다.
+    private var energyCard: some View {
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    SectionLabel(text: "달빛 기운")
+                    Text(store.energyStars)
+                        .font(.system(size: 10))
+                        .foregroundStyle(ForestPalette.sage)
+                        .tracking(1)
+                }
+                Text(store.energyHint)
+                    .font(.story(11))
+                    .foregroundStyle(ForestPalette.inkSoft)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+            Text("\(store.moonlightEnergy)/\(store.maxEnergy)")
+                .font(.label(12))
+                .foregroundStyle(store.canGather ? ForestPalette.sage : ForestPalette.terracotta)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Capsule().fill(ForestPalette.parchment.opacity(0.9)))
+        }
+        .storybookCard(padding: 14)
     }
 
     private var storyCard: some View {
@@ -242,6 +270,36 @@ struct ForestMapView: View {
                 Text("에필로그 뒤에 열리는 사계절 온실은 상점에서 열 수 있어요.")
                     .font(.story(10))
                     .foregroundStyle(ForestPalette.inkSoft)
+            }
+
+            if store.orderBoardUnlocked {
+                Button {
+                    store.openOrders()
+                } label: {
+                    HStack(spacing: 6) {
+                        Text("📜 오늘의 주문서")
+                        if let record = store.todaysOrderRecord {
+                            Text(record.matched ? "맞힘" : "마침")
+                                .font(.label(9))
+                                .foregroundStyle(ForestPalette.parchment)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Capsule().fill(ForestPalette.sage))
+                        } else {
+                            Text("새 주문")
+                                .font(.label(9))
+                                .foregroundStyle(ForestPalette.parchment)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Capsule().fill(ForestPalette.terracotta))
+                        }
+                        Spacer()
+                        Text("\(store.orderPoints)점")
+                            .font(.label(10))
+                            .foregroundStyle(ForestPalette.inkSoft)
+                    }
+                }
+                .buttonStyle(QuietButtonStyle(tint: ForestPalette.terracotta))
             }
         }
         .storybookCard()

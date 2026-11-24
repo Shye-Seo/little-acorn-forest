@@ -207,6 +207,17 @@ struct GiftSheet: View {
                             .multilineTextAlignment(.center)
                             .padding(.top, 20)
                     } else {
+                        Text(store.giftHint(for: character))
+                            .font(.story(11))
+                            .foregroundStyle(ForestPalette.inkSoft)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 7)
+                            .frame(maxWidth: .infinity)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(ForestPalette.parchmentDeep.opacity(0.5))
+                            )
                         ForEach(store.giftableRecipes()) { record in
                             dishRow(record)
                         }

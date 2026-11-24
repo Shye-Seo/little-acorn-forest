@@ -58,6 +58,12 @@ struct GatheringGameView: View {
                     .foregroundStyle(ForestPalette.inkSoft)
             }
             Spacer()
+            Text("🌙 \(store.moonlightEnergy)/\(store.maxEnergy)")
+                .font(.label(10))
+                .foregroundStyle(ForestPalette.sage)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Capsule().fill(ForestPalette.parchment.opacity(0.9)))
             if let session = store.gathering {
                 Text(AppText.timer(session.remaining))
                     .font(.label(13))

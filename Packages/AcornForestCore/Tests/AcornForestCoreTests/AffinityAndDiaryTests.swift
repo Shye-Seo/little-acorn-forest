@@ -3,23 +3,56 @@ import AcornForestCore
 
 final class AffinityAndDiaryTests: XCTestCase {
     func testLevelThresholds() {
+        XCTAssertEqual(AffinityLevel.greeting.rawValue, 20)
+        XCTAssertEqual(AffinityLevel.close.rawValue, 150)
+        XCTAssertEqual(AffinityLevel.family.rawValue, 210)
         XCTAssertEqual(AffinitySystem.level(for: 0), .shy)
         XCTAssertEqual(AffinitySystem.level(for: 19), .shy)
         XCTAssertEqual(AffinitySystem.level(for: 20), .greeting)
-        XCTAssertEqual(AffinitySystem.level(for: 44), .greeting)
-        XCTAssertEqual(AffinitySystem.level(for: 45), .close)
-        XCTAssertEqual(AffinitySystem.level(for: 69), .close)
-        XCTAssertEqual(AffinitySystem.level(for: 70), .family)
-        XCTAssertEqual(AffinitySystem.level(for: 100), .family)
+        XCTAssertEqual(AffinitySystem.level(for: 149), .greeting)
+        XCTAssertEqual(AffinitySystem.level(for: 150), .close)
+        XCTAssertEqual(AffinitySystem.level(for: 209), .close)
+        XCTAssertEqual(AffinitySystem.level(for: 210), .family)
+        XCTAssertEqual(AffinitySystem.level(for: AffinitySystem.maximum), .family)
     }
 
     func testAffinityIsClampedToMaximum() {
-        XCTAssertEqual(AffinitySystem.clamped(130), 100)
+        XCTAssertEqual(AffinitySystem.maximum, 240)
+        XCTAssertEqual(AffinitySystem.clamped(200), 200)
+        XCTAssertEqual(AffinitySystem.clamped(999), 240)
         XCTAssertEqual(AffinitySystem.clamped(-5), 0)
         var state = GameEngine.freshState()
         state.addAffinity(500, to: .tori)
-        XCTAssertEqual(state.affinityPoints(for: .tori), 100)
+        XCTAssertEqual(state.affinityPoints(for: .tori), 240)
         XCTAssertEqual(state.affinityLevel(for: .tori), .family)
+    }
+
+    func testDailyGiftDecay() {
+        XCTAssertEqual(AffinitySystem.dailyGiftFactor(forGiftIndex: 0), 1.0, accuracy: 0.0001)
+        XCTAssertEqual(AffinitySystem.dailyGiftFactor(forGiftIndex: 1), 0.5, accuracy: 0.0001)
+        XCTAssertEqual(AffinitySystem.dailyGiftFactor(forGiftIndex: 2), 0.3, accuracy: 0.0001)
+        XCTAssertEqual(AffinitySystem.dailyGiftFactor(forGiftIndex: 3), 0.15, accuracy: 0.0001)
+        XCTAssertEqual(AffinitySystem.dailyGiftFactor(forGiftIndex: 9), 0.15, accuracy: 0.0001,
+                       "같은 날 더 많이 건네도 이 아래로는 내려가지 않는다")
+    }
+
+    func testSecondGiftOfTheDayIsDiminished() {
+        var state = TestSupport.stockedState([])
+        state.addCooked(recipeID: "meteor-berry-compote", quality: .perfect, extraServings: 2)
+        let engine = TestSupport.engine(state: state)
+        let first = engine.gift(recipeID: "meteor-berry-compote", to: .tori)
+        let second = engine.gift(recipeID: "meteor-berry-compote", to: .tori)
+        XCTAssertEqual(first.gain, 15, "최애 잼 + 완벽한 온기")
+        XCTAssertEqual(second.gain, 8, "같은 날 두 번째는 50%만")
+        XCTAssertTrue(second.wasDiminished)
+        XCTAssertTrue(second.message.contains("잦아들었"))
+
+        engine.simulateNextDay()
+        state = engine.state
+        XCTAssertEqual(state.giftsGiven(to: .tori, day: state.currentDay(at: engine.now())), 0,
+                       "날이 바뀌면 오늘의 선물 수가 처음부터 다시 센다")
+        let third = engine.gift(recipeID: "meteor-berry-compote", to: .tori)
+        XCTAssertEqual(third.gain, 15)
     }
 
     func testGiftPreferenceOrdering() {
@@ -32,9 +65,9 @@ final class AffinityAndDiaryTests: XCTestCase {
         let favoritePoints = AffinitySystem.baseGiftPoints(recipe: favorite, for: .tori)
         let likedPoints = AffinitySystem.baseGiftPoints(recipe: liked, for: .tori)
         let dislikedPoints = AffinitySystem.baseGiftPoints(recipe: neutral, for: .tori)
-        XCTAssertEqual(favoritePoints, 12)
-        XCTAssertEqual(likedPoints, 7)
-        XCTAssertEqual(dislikedPoints, 1)
+        XCTAssertEqual(favoritePoints, AffinitySystem.favoritePoints)
+        XCTAssertEqual(likedPoints, AffinitySystem.likedPoints)
+        XCTAssertEqual(dislikedPoints, AffinitySystem.dislikedPoints)
         XCTAssertGreaterThan(favoritePoints, likedPoints)
     }
 

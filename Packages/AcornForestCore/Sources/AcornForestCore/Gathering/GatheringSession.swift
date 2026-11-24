@@ -108,7 +108,7 @@ public struct GatheringSummary: Sendable, Equatable {
 /// 3개의 길로 재료가 떨어지고, 도착 지점에서 ±catchWindow 안에 누르면 바구니에 담긴다.
 public struct GatheringSession: Sendable {
     public static let laneCount = 3
-    public static let defaultDuration: Double = 26.0
+    public static let defaultDuration: Double = GatherBalance.sessionDuration
     public static let defaultCatchWindow: Double = 0.24
     public static let missPenalty = 3
     public static let streakStep = 0.1
@@ -144,7 +144,7 @@ public struct GatheringSession: Sendable {
 
     static func makeItems(location: ForestLocation, seed: UInt64, duration: Double) -> [GatherItem] {
         var rng = SeededRandom(seed: seed)
-        let pool = location.ingredientPool
+        let table = location.dropTable
         var list: [GatherItem] = []
         var time = 0.8
         var id = 0
@@ -152,7 +152,7 @@ public struct GatheringSession: Sendable {
         while time < duration - 0.5 {
             let fall = Double.random(in: location.fallDuration, using: &rng)
             let lane = Int.random(in: 0..<GatheringSession.laneCount, using: &rng)
-            let ingredient = pool[Int.random(in: 0..<pool.count, using: &rng)]
+            guard let ingredient = GatherBalance.pick(from: table, using: &rng) else { break }
             let goldenRoll = Double.random(in: 0..<1, using: &rng)
             let catchTime = min(duration - 0.35, time + fall)
             list.append(GatherItem(
@@ -161,7 +161,7 @@ public struct GatheringSession: Sendable {
                 ingredient: ingredient,
                 catchTime: catchTime,
                 fallDuration: fall,
-                isGolden: goldenRoll < 0.12
+                isGolden: goldenRoll < GatherBalance.goldenChance
             ))
             id += 1
             let gap = Double.random(in: location.spawnInterval, using: &rng)
