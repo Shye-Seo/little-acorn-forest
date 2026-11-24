@@ -1,5 +1,9 @@
 # 달빛 잼 항아리 (Moonlight Jam Jar)
 
+<p align="center">
+  <img src="docs/images/app-icon.png" width="180" alt="달빛 잼 항아리 앱 아이콘">
+</p>
+
 > 할머니의 오두막을 물려받은 보리가, 숲속 이웃 네 명의 소원을 모아 별빛 축제를 여는 이야기.
 
 iOS 17+ · SwiftUI · Swift 5.9 · XcodeGen · iPhone 세로 화면
@@ -119,9 +123,11 @@ iOS 17+ · SwiftUI · Swift 5.9 · XcodeGen · iPhone 세로 화면
 little-acorn-forest/
 ├── project.yml                      # XcodeGen 프로젝트 정의
 ├── docs/images/                     # README용 일러스트 (게임에 쓰이지는 않음)
+│   ├── app-icon.png                 # 앱 아이콘 (AppIcon.appiconset 원본에서 복사)
 │   ├── characters.png               # 보리와 이웃 네 명
 │   └── fantasy-items.png            # 마법 잼 항아리와 채집 재료 4종
 ├── App/                             # SwiftUI 앱 타깃
+│   ├── Assets.xcassets/             # 앱 아이콘 (AppIcon.appiconset, 1024×1024)
 │   ├── LittleAcornForestApp.swift   # @main, RootView
 │   ├── GameStore.swift              # @MainActor ObservableObject, 화면 상태
 │   ├── Services/
@@ -156,7 +162,7 @@ little-acorn-forest/
 - **채집은 시드 고정 난수(SplitMix64).** 같은 시드면 같은 순서로 재료가 떨어져서, 테스트에서 "모든 재료를 도착 시각에 담으면 전부 담긴다"를 결정적으로 검증할 수 있습니다.
 - **잼은 물리 시뮬레이션이 아니라 '이상 구간 체류 비율' 모델.** 0.42~0.70에 머문 시간 비율이 55% 이상이면 완벽, 28% 이상이면 보통, 그 아래이거나 한 번이라도 0.95를 넘으면 탄 잼입니다. 숫자 하나로 설명되고 테스트하기 쉬운 쪽을 택했습니다.
 - **저장은 JSON 한 덩어리.** `SaveFile`에 포맷 버전과 상태, 저장 시각을 담아 `UserDefaults`에 넣습니다. 읽을 때 `GameState.normalize()`가 빠진 필드를 채워서 구버전 저장 파일도 열립니다.
-- **앱 안의 일러스트는 전부 코드로 그린다.** 이미지 에셋 없이 `Canvas`/`Shape`로 숲, 오두막, 동물, 솥단지, 반딧불이를 그립니다. 앱 용량이 가볍고, 색 팔레트를 바꾸면 화면 전체가 같이 바뀝니다. `docs/images/`의 그림은 README를 위한 별도 결과물입니다.
+- **앱 안의 일러스트는 전부 코드로 그린다.** `Canvas`/`Shape`로 숲, 오두막, 동물, 솥단지, 반딧불이를 그립니다. 앱 용량이 가볍고, 색 팔레트를 바꾸면 화면 전체가 같이 바뀝니다. 이미지 에셋은 홈 화면에 나오는 **앱 아이콘 하나**뿐입니다(`App/Assets.xcassets/AppIcon.appiconset`, 1024×1024 PNG). `docs/images/`의 그림은 README를 위한 별도 결과물입니다.
 
 ### 디자인 토큰
 

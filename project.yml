@@ -38,6 +38,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.quoguri.moonlightjamjar.app
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.games
         SWIFT_EMIT_LOC_STRINGS: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
   LittleAcornForestTests:
     type: bundle.unit-test
     platform: iOS

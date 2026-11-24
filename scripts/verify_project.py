@@ -20,8 +20,10 @@
 
 from __future__ import annotations
 
+import json
 import math
 import re
+import struct
 import sys
 from pathlib import Path
 
@@ -325,6 +327,11 @@ if isinstance(project, dict):
     check("테스트 소스 경로 = Tests", test_paths == ["Tests"], str(test_paths))
     check("앱 테스트 파일 존재", len(app_test_files) >= 1, f"{len(app_test_files)}개")
 
+    compiler_settings = app_target.get("settings", {}).get("base", {})
+    check("앱 아이콘 컴파일러 설정",
+          compiler_settings.get("ASSETCATALOG_COMPILER_APPICON_NAME") == "AppIcon",
+          str(compiler_settings.get("ASSETCATALOG_COMPILER_APPICON_NAME")))
+
     info_props = app_target.get("info", {}).get("properties", {})
     orientations = info_props.get("UISupportedInterfaceOrientations", [])
     check("세로 고정 레이아웃", orientations == ["UIInterfaceOrientationPortrait"], str(orientations))
@@ -336,6 +343,58 @@ if isinstance(project, dict):
     check("Core 패키지 이름", 'name: "AcornForestCore"' in package_text)
     check("Core 테스트 타깃", "AcornForestCoreTests" in package_text)
     check("Core 테스트 소스 경로", "Tests/AcornForestCoreTests" in package_text)
+
+# ---------------------------------------------------------------------------
+# 2b) 앱 아이콘 (Assets.xcassets / AppIcon.appiconset)
+# ---------------------------------------------------------------------------
+
+asset_root = APP_DIR / "Assets.xcassets"
+icon_set = asset_root / "AppIcon.appiconset"
+icon_catalog_path = icon_set / "Contents.json"
+
+check("Assets.xcassets 존재", (asset_root / "Contents.json").exists(), str(asset_root.relative_to(ROOT)))
+check("AppIcon.appiconset 존재", icon_set.is_dir(), str(icon_set.relative_to(ROOT)))
+
+icon_entry: dict = {}
+if icon_catalog_path.exists():
+    try:
+        icon_catalog = json.loads(read(icon_catalog_path))
+        check("AppIcon Contents.json 파싱", isinstance(icon_catalog, dict))
+    except json.JSONDecodeError as exc:
+        icon_catalog = {}
+        fail("AppIcon Contents.json 파싱", str(exc))
+    icon_images = icon_catalog.get("images", []) if isinstance(icon_catalog, dict) else []
+    check("AppIcon 1024 단일 슬롯", len(icon_images) == 1
+          and icon_images[0].get("size") == "1024x1024"
+          and icon_images[0].get("idiom") == "universal", str(icon_images))
+    icon_entry = icon_images[0] if icon_images else {}
+    check("AppIcon 슬롯 platform = ios", icon_entry.get("platform") == "ios",
+          str(icon_entry.get("platform")))
+    icon_info = icon_catalog.get("info", {}) if isinstance(icon_catalog, dict) else {}
+    check("AppIcon info.author = xcode", icon_info.get("author") == "xcode", str(icon_info))
+else:
+    fail("AppIcon Contents.json 존재", str(icon_catalog_path.relative_to(ROOT)))
+
+icon_png = icon_set / icon_entry["filename"] if icon_entry.get("filename") else None
+check("AppIcon 파일 이름 지정", icon_png is not None, str(icon_entry))
+if icon_png is not None and icon_png.exists():
+    icon_bytes = icon_png.read_bytes()
+    check("AppIcon PNG 시그니처", icon_bytes[:8] == b"\x89PNG\r\n\x1a\n")
+    icon_width, icon_height = struct.unpack(">II", icon_bytes[16:24])
+    icon_depth, icon_color = icon_bytes[24], icon_bytes[25]
+    check("AppIcon 1024x1024", icon_width == 1024 and icon_height == 1024,
+          f"{icon_width}x{icon_height}")
+    check("AppIcon 8비트 RGB(알파 없음)", icon_depth == 8 and icon_color == 2,
+          f"depth={icon_depth} colorType={icon_color}")
+    check("AppIcon tRNS 투명도 없음", b"tRNS" not in icon_bytes)
+else:
+    icon_bytes = b""
+    fail("AppIcon 파일 존재", str(icon_png))
+
+readme_icon = ROOT / "docs/images/app-icon.png"
+check("docs/images/app-icon.png 존재", readme_icon.exists())
+if readme_icon.exists() and icon_bytes:
+    check("docs 아이콘이 AppIcon과 동일한 파일", readme_icon.read_bytes() == icon_bytes)
 
 check("LICENSE 파일 없음", not (ROOT / "LICENSE").exists())
 check(".gitignore 존재", (ROOT / ".gitignore").exists())
@@ -698,11 +757,16 @@ if readme_path.exists():
 
     # README가 실제로 존재하는 일러스트를 가리키는지
     image_refs = re.findall(r"!\[[^\]]*\]\((docs/images/[^)\s]+)\)", readme)
+    image_refs += re.findall(r"<img[^>]+src=\"(docs/images/[^\"]+)\"", readme)
     check("README: 일러스트 2장 이상", len(set(image_refs)) >= 2, str(sorted(set(image_refs))))
     missing_images = [ref for ref in set(image_refs) if not (ROOT / ref).exists()]
     check("README: 일러스트 파일 존재", not missing_images, str(missing_images))
     for name in ("docs/images/characters.png", "docs/images/fantasy-items.png"):
         check(f"README: {name} 포함", name in image_refs)
+    icon_at = readme.find("docs/images/app-icon.png")
+    first_section = readme.find("\n## ")
+    check("README: 앱 아이콘을 제목 바로 아래에 게재", 0 <= icon_at < first_section,
+          f"icon={icon_at} firstSection={first_section}")
 else:
     fail("README 내용", "README.md 없음")
 
