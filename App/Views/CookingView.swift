@@ -11,6 +11,12 @@ struct CookingView: View {
         VStack(spacing: 10) {
             header
 
+            HStack {
+                MoonBadgeView(showsDetail: false)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 16)
+
             if let outcome {
                 resultCard(outcome)
             } else if let cooking = store.cooking {
@@ -75,10 +81,16 @@ struct CookingView: View {
                             .foregroundStyle(ForestPalette.inkSoft)
                     }
 
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 96), spacing: 8)], spacing: 8) {
-                        ForEach(Ingredient.allCases) { ingredient in
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 92), spacing: 8)], spacing: 8) {
+                        ForEach(store.visibleIngredients) { ingredient in
                             ingredientButton(ingredient)
                         }
+                    }
+                    if store.visibleIngredients.contains(where: { $0.isExpansionIngredient }) {
+                        Text("🌕 달빛 비밀 정원과 사계절 온실에서만 나오는 재료가 섞여 있어요.")
+                            .font(.story(10))
+                            .foregroundStyle(ForestPalette.inkSoft)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 .storybookCard()
@@ -314,6 +326,25 @@ struct CookingView: View {
                     .foregroundStyle(ForestPalette.ink)
                     .fixedSize(horizontal: false, vertical: true)
 
+                if let blessing = outcome.blessing, blessing.hasEffect {
+                    VStack(spacing: 3) {
+                        Text("\(blessing.phase.emoji) \(blessing.title)")
+                            .font(.label(11))
+                            .foregroundStyle(ForestPalette.terracotta)
+                        Text(blessing.note)
+                            .font(.story(11))
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(ForestPalette.inkSoft)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(ForestPalette.butter.opacity(0.35))
+                    )
+                }
+
                 if outcome.isNewRecipe {
                     Text("새 레시피를 일기장에 적었어요")
                         .font(.label(11))
@@ -322,10 +353,14 @@ struct CookingView: View {
 
                 VStack(spacing: 8) {
                     if outcome.recipe != nil {
+                        Button("병에 담아 선반에 올리기") {
+                            store.openShelf(preselect: outcome.recipe?.id)
+                        }
+                        .buttonStyle(StorybookButtonStyle(tint: ForestPalette.terracotta))
                         Button("이웃에게 선물하러 가기") {
                             store.openNeighbours()
                         }
-                        .buttonStyle(StorybookButtonStyle(tint: ForestPalette.terracotta))
+                        .buttonStyle(QuietButtonStyle(tint: ForestPalette.terracotta))
                     }
                     Button("한 번 더 만들기") {
                         self.outcome = nil

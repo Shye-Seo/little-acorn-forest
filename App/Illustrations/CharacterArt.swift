@@ -65,6 +65,8 @@ enum CharacterArt {
         case .songi: drawSongi(in: context, size: size)
         case .mong: drawMong(in: context, size: size)
         case .rubi: drawRubi(in: context, size: size)
+        case .luna: drawLuna(in: context, size: size)
+        case .coco: drawCoco(in: context, size: size)
         }
     }
 
@@ -210,6 +212,77 @@ enum CharacterArt {
         eye(context, at: CGPoint(x: w * 0.41, y: h * 0.31), radius: w * 0.026, color: ForestPalette.ink)
         eye(context, at: CGPoint(x: w * 0.60, y: h * 0.31), radius: w * 0.026, color: ForestPalette.ink)
         eye(context, at: CGPoint(x: w * 0.505, y: h * 0.38), radius: w * 0.02, color: ForestPalette.ink)
+    }
+
+    private static func drawLuna(in context: GraphicsContext, size: CGSize) {
+        let w = size.width
+        let h = size.height
+        let fur = Color(hex: 0xBFA98E)
+        let cream = Color(hex: 0xF6EBDD)
+
+        // 뿔
+        for sign in [CGFloat(-1), CGFloat(1)] {
+            let baseX = w * (0.5 + sign * 0.10)
+            context.fill(triangle(CGPoint(x: baseX, y: h * 0.24),
+                                  CGPoint(x: baseX + sign * w * 0.14, y: h * 0.04),
+                                  CGPoint(x: baseX + sign * w * 0.03, y: h * 0.22)),
+                         with: .color(ForestPalette.chestnut))
+            context.fill(ellipse(baseX + sign * w * 0.11, h * 0.05, w * 0.07, h * 0.06),
+                         with: .color(ForestPalette.moonlight))
+        }
+
+        // 몸통
+        context.fill(ellipse(w * 0.22, h * 0.46, w * 0.56, h * 0.42), with: .color(fur))
+        context.fill(ellipse(w * 0.34, h * 0.56, w * 0.32, h * 0.26), with: .color(cream.opacity(0.85)))
+
+        // 귀
+        context.fill(ellipse(w * 0.22, h * 0.22, w * 0.18, h * 0.16), with: .color(fur))
+        context.fill(ellipse(w * 0.60, h * 0.22, w * 0.18, h * 0.16), with: .color(fur))
+
+        // 머리
+        context.fill(ellipse(w * 0.30, h * 0.20, w * 0.42, h * 0.34), with: .color(fur))
+        context.fill(ellipse(w * 0.38, h * 0.36, w * 0.26, h * 0.16), with: .color(cream))
+        eye(context, at: CGPoint(x: w * 0.42, y: h * 0.32), radius: w * 0.024, color: ForestPalette.ink)
+        eye(context, at: CGPoint(x: w * 0.60, y: h * 0.32), radius: w * 0.024, color: ForestPalette.ink)
+        eye(context, at: CGPoint(x: w * 0.51, y: h * 0.40), radius: w * 0.018, color: ForestPalette.ink)
+
+        // 뿔에 쌓인 눈
+        context.fill(ellipse(w * 0.30, h * 0.12, w * 0.16, h * 0.05), with: .color(.white.opacity(0.9)))
+        context.fill(ellipse(w * 0.56, h * 0.10, w * 0.14, h * 0.045), with: .color(.white.opacity(0.85)))
+    }
+
+    private static func drawCoco(in context: GraphicsContext, size: CGSize) {
+        let w = size.width
+        let h = size.height
+        let fur = Color(hex: 0x8A6A52)
+        let belly = Color(hex: 0xE7CBAF)
+
+        // 꼬리
+        var tail = Path()
+        tail.move(to: CGPoint(x: w * 0.66, y: h * 0.72))
+        tail.addQuadCurve(to: CGPoint(x: w * 0.94, y: h * 0.60),
+                          control: CGPoint(x: w * 0.90, y: h * 0.86))
+        tail.addQuadCurve(to: CGPoint(x: w * 0.70, y: h * 0.64),
+                          control: CGPoint(x: w * 0.86, y: h * 0.66))
+        context.fill(tail, with: .color(fur))
+
+        // 몸통
+        context.fill(ellipse(w * 0.24, h * 0.48, w * 0.50, h * 0.40), with: .color(fur))
+        context.fill(ellipse(w * 0.34, h * 0.58, w * 0.30, h * 0.24), with: .color(belly))
+
+        // 귀
+        context.fill(ellipse(w * 0.28, h * 0.22, w * 0.14, h * 0.12), with: .color(fur))
+        context.fill(ellipse(w * 0.58, h * 0.22, w * 0.14, h * 0.12), with: .color(fur))
+
+        // 머리
+        context.fill(ellipse(w * 0.30, h * 0.20, w * 0.40, h * 0.32), with: .color(fur))
+        context.fill(ellipse(w * 0.36, h * 0.34, w * 0.28, h * 0.18), with: .color(belly))
+        eye(context, at: CGPoint(x: w * 0.41, y: h * 0.30), radius: w * 0.024, color: ForestPalette.ink)
+        eye(context, at: CGPoint(x: w * 0.59, y: h * 0.30), radius: w * 0.024, color: ForestPalette.ink)
+        eye(context, at: CGPoint(x: w * 0.50, y: h * 0.38), radius: w * 0.02, color: ForestPalette.ink)
+
+        // 손에 쥔 조약돌
+        context.fill(ellipse(w * 0.46, h * 0.66, w * 0.12, h * 0.10), with: .color(ForestPalette.sageLight))
     }
 
     // MARK: - 보리

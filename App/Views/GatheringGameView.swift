@@ -12,6 +12,12 @@ struct GatheringGameView: View {
         VStack(spacing: 10) {
             header
 
+            HStack {
+                MoonBadgeView(showsDetail: false)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 16)
+
             if let summary {
                 summaryCard(summary)
             } else if let session = store.gathering {

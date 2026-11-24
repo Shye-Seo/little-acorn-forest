@@ -12,6 +12,11 @@ final class GameStore: ObservableObject {
         case cooking
         case diary
         case neighbours
+        case shelf
+        case mailbox
+        case focus
+        case store
+        case greenhouse
     }
 
     @Published private(set) var screen: Screen = .title
@@ -23,11 +28,17 @@ final class GameStore: ObservableObject {
     @Published private(set) var lastCooking: CookingOutcome?
     @Published private(set) var lastGathering: GatheringSummary?
     @Published private(set) var lastGift: GiftOutcome?
+    @Published private(set) var lastReward: FocusReward?
+    @Published private(set) var dialogue: DialogueOutcome?
+    @Published private(set) var selectedCharacter: CharacterID?
+    @Published private(set) var shelfPreselect: String?
 
     let engine: GameEngine
+    let purchases = StoreManager()
 
     private var toastTask: Task<Void, Never>?
     private var diaryReturn: Screen = .title
+    private var returnScreen: Screen = .map
 
     init(engine: GameEngine? = nil) {
         if let engine {
@@ -60,6 +71,10 @@ final class GameStore: ObservableObject {
         engine.isLocationUnlocked(location)
     }
 
+    func lockMessage(for location: ForestLocation) -> String {
+        engine.lockMessage(for: location)
+    }
+
     var chapterTitle: String {
         engine.currentChapter?.title ?? "달빛 잼 항아리"
     }
@@ -75,7 +90,7 @@ final class GameStore: ObservableObject {
         Double(state.completedChapters.count) / Double(StoryChapter.allCases.count)
     }
 
-    var diaryEntriesUnlocked: Int { state.diary.count }
+    var diaryEntriesUnlocked: Int { state.diaryProgress.unlocked }
 
     var canContinueStory: Bool {
         engine.state.storyPosition != nil || engine.nextChapterToPlay != nil
@@ -87,8 +102,36 @@ final class GameStore: ObservableObject {
         return "이야기 완결"
     }
 
-    private func bump() {
-        revision &+= 1
+    // MARK: - 달
+
+    var moonPhase: MoonPhase { engine.currentMoonPhase }
+    var moonBadgeLine: String { engine.moonBadgeLine }
+    var moonDetailLine: String {
+        if engine.currentMoonPhase.isFullMoon { return "달빛 비밀 정원이 열렸어요" }
+        let days = max(1, Int(engine.daysUntilFullMoon.rounded(.up)))
+        return "다음 보름달까지 \(days)일"
+    }
+    var moonGardenLine: String { engine.moonGardenLine }
+    var isMoonlitGardenOpen: Bool { engine.isMoonlitGardenOpen }
+
+    /// 달 배지를 길게 누르면 위상을 한 단계씩 고정한다(디버그).
+    func cycleMoonOverride() {
+        let order = MoonPhase.allCases
+        guard let current = engine.state.debugMoonOverride else {
+            engine.setMoonOverride(order[0])
+            showToast("달을 \(order[0].title)(으)로 고정했어요.")
+            bump()
+            return
+        }
+        let nextIndex = (order.firstIndex(of: current) ?? 0) + 1
+        if nextIndex >= order.count {
+            engine.setMoonOverride(nil)
+            showToast("달을 실제 날짜로 되돌렸어요.")
+        } else {
+            engine.setMoonOverride(order[nextIndex])
+            showToast("달을 \(order[nextIndex].title)(으)로 고정했어요.")
+        }
+        bump()
     }
 
     // MARK: - 화면 이동
@@ -127,6 +170,7 @@ final class GameStore: ObservableObject {
         storyStep = nil
         sceneSummary = nil
         completion = nil
+        dialogue = nil
         screen = .map
         refreshChapterAvailability()
         bump()
@@ -151,7 +195,53 @@ final class GameStore: ObservableObject {
     }
 
     func openNeighbours() {
+        returnScreen = screen
         screen = .neighbours
+        bump()
+    }
+
+    func openShelf(preselect recipeID: String? = nil) {
+        returnScreen = screen
+        shelfPreselect = recipeID
+        screen = .shelf
+        bump()
+    }
+
+    func openMailbox() {
+        returnScreen = screen
+        screen = .mailbox
+        bump()
+    }
+
+    func openFocus() {
+        returnScreen = screen
+        lastReward = nil
+        screen = .focus
+        bump()
+    }
+
+    func openStore() {
+        returnScreen = screen
+        screen = .store
+        bump()
+    }
+
+    func openGreenhouse() {
+        guard engine.owns(.greenhouse), engine.isLocationUnlocked(.greenhouse) else {
+            showToast(engine.lockMessage(for: .greenhouse))
+            return
+        }
+        returnScreen = .map
+        screen = .greenhouse
+        bump()
+    }
+
+    func back() {
+        if screen == .shelf { shelfPreselect = nil }
+        if screen == .focus { stopFocusAudio() }
+        dialogue = nil
+        selectedCharacter = nil
+        screen = returnScreen == screen ? .map : returnScreen
         bump()
     }
 
@@ -230,7 +320,8 @@ final class GameStore: ObservableObject {
 
     func openGathering(at location: ForestLocation) {
         guard engine.isLocationUnlocked(location) else {
-            showToast("\(location.title)은 아직 열리지 않았어요. 이야기를 더 진행해 주세요.")
+            showToast(engine.lockMessage(for: location))
+            Haptics.warning()
             return
         }
         if engine.startGathering(at: location) {
@@ -280,6 +371,7 @@ final class GameStore: ObservableObject {
     func openCooking() {
         engine.cancelCooking()
         lastCooking = nil
+        returnScreen = .map
         screen = .cooking
         bump()
     }
@@ -321,6 +413,12 @@ final class GameStore: ObservableObject {
         bump()
     }
 
+    func recipePreview(for ingredients: [Ingredient]) -> Recipe? {
+        engine.recipePreview(for: ingredients)
+    }
+
+    var visibleIngredients: [Ingredient] { engine.visibleIngredients }
+
     // MARK: - 선물
 
     func gift(recipeID: String, to character: CharacterID) {
@@ -333,6 +431,224 @@ final class GameStore: ObservableObject {
 
     func giftableRecipes() -> [CookedRecord] {
         state.cooked.filter { $0.servings > 0 }
+    }
+
+    // MARK: - 잼 병과 선반
+
+    var shelfJars: [CustomJamJar] { engine.shelfJars }
+    var canDecorate: Bool { engine.canDecorate }
+    var ownsWorkshop: Bool { engine.owns(.bottleWorkshop) }
+    var cabinStyle: CabinStyle { state.cabinStyle }
+    var unlockedCabinStyles: [CabinStyle] { state.unlockedCabinStyles }
+    var unlockedBottles: [JarBottleStyle] { state.unlockedBottles }
+    var unlockedCaps: [JarCapStyle] { state.unlockedCaps }
+
+    func decorateJar(recipeID: String,
+                     bottle: JarBottleStyle,
+                     cap: JarCapStyle,
+                     ribbon: JarRibbonColor,
+                     label: String) -> Bool {
+        let outcome = engine.decorateJar(recipeID: recipeID, bottle: bottle, cap: cap, ribbon: ribbon, label: label)
+        if outcome.succeeded {
+            Haptics.success()
+            ForestAudio.shared.playJarPop()
+            toast = outcome.message
+            shelfPreselect = nil
+        } else {
+            Haptics.warning()
+            showToast(outcome.message)
+        }
+        bump()
+        return outcome.succeeded
+    }
+
+    func removeJar(id: String) {
+        if engine.removeJar(id: id) {
+            Haptics.tap()
+            showToast(engine.lastMessage)
+        }
+        bump()
+    }
+
+    func setCabinStyle(_ style: CabinStyle) {
+        engine.setCabinStyle(style)
+        Haptics.tap()
+        bump()
+    }
+
+    // MARK: - 우체통
+
+    var mailboxLetters: [MailboxLetter] { engine.sortedLetters }
+    var mailBadgeCount: Int { engine.mailBadgeCount }
+
+    func checkMailbox() {
+        let delivered = engine.checkMailbox()
+        if !delivered.isEmpty {
+            Haptics.success()
+            showToast("우체통에 편지 \(delivered.count)통이 들어왔어요.")
+        } else {
+            showToast("새로 온 편지는 없어요.")
+        }
+        bump()
+    }
+
+    func claimLetter(id: String) {
+        if let letter = engine.claimLetter(id: id) {
+            Haptics.success()
+            showToast(engine.lastMessage.isEmpty ? "\(letter.sender.name)의 편지를 읽었어요." : engine.lastMessage)
+        }
+        bump()
+    }
+
+    /// 테스트·디버그용 하루 넘기기.
+    func simulateNextDay() {
+        let delivered = engine.simulateNextDay()
+        showToast(delivered.isEmpty ? "하루가 지났지만 새 편지는 없어요." : "하루가 지났어요. 편지 \(delivered.count)통.")
+        bump()
+    }
+
+    // MARK: - 집중 타이머
+
+    var focusSession: FocusSession? { engine.focusSession }
+    var focusRewardPreview: FocusReward? { engine.currentFocusRewardPreview }
+    var fireflyDust: Int { state.fireflyDust }
+    var focusSessions: Int { state.focusSessions }
+    var unlockedTracks: [AmbientTrack] { state.unlockedTracks }
+
+    func isTrackAvailable(_ track: AmbientTrack) -> Bool {
+        engine.isTrackAvailable(track)
+    }
+
+    func startFocus(_ duration: FocusDuration, track: AmbientTrack) {
+        guard engine.startFocus(duration, track: track) else {
+            showToast(engine.lastMessage)
+            return
+        }
+        ForestAudio.shared.playAmbient(track)
+        lastReward = nil
+        Haptics.tap()
+        bump()
+    }
+
+    func tickFocus(_ delta: Double) {
+        guard engine.focusSession != nil else { return }
+        engine.tickFocus(delta)
+        bump()
+    }
+
+    func finishFocus() {
+        if let reward = engine.finishFocus() {
+            lastReward = reward
+            ForestAudio.shared.stopAmbient()
+            Haptics.success()
+            showToast(reward.message)
+        }
+        bump()
+    }
+
+    func clearFocusReward() {
+        lastReward = nil
+        bump()
+    }
+
+    func cancelFocus() {
+        engine.cancelFocus()
+        ForestAudio.shared.stopAmbient()
+        lastReward = nil
+        bump()
+    }
+
+    func stopFocusAudio() {
+        ForestAudio.shared.stopAmbient()
+    }
+
+    // MARK: - 확장팩과 상점
+
+    var storeProducts: [ContentPack] { StoreCatalog.all }
+    var ownsGreenhouse: Bool { engine.owns(.greenhouse) }
+    var ownsASMR: Bool { engine.owns(.asmrTracks) }
+    var secretRecipeCount: Int { state.secretRecipes.count }
+
+    /// 일기장에 확장 기록 칸을 함께 보여 줄지.
+    var showsExpandedDiary: Bool {
+        ownsGreenhouse || secretRecipeCount > 0
+    }
+
+    var expandedDiaryUnlocked: Int { state.expandedDiaryProgress.unlocked }
+    var expandedDiaryTotal: Int { state.expandedDiaryProgress.total }
+
+    func owns(_ pack: ContentPack) -> Bool {
+        engine.owns(pack)
+    }
+
+    func prepareStore() async {
+        await purchases.load()
+        applyEntitlements(await purchases.currentEntitlements())
+    }
+
+    func buy(_ pack: ContentPack) async {
+        purchases.statusMessage = nil
+        let purchased = await purchases.purchase(pack)
+        if purchased {
+            applyEntitlements(await purchases.currentEntitlements())
+            showToast("「\(pack.displayName)」이(가) 열렸어요.")
+        } else if let message = purchases.statusMessage {
+            showToast(message)
+        }
+        bump()
+    }
+
+    func restorePurchases() async {
+        let ids = await purchases.restore()
+        applyEntitlements(ids)
+        showToast(ids.isEmpty ? "복원할 구매가 없어요." : "구매를 복원했어요.")
+        bump()
+    }
+
+    func toggleSimulation() {
+        purchases.isSimulated.toggle()
+        showToast(purchases.isSimulated ? "로컬 구매 시뮬레이션을 켰어요." : "실제 StoreKit 결제로 돌아갑니다.")
+        bump()
+    }
+
+    private func applyEntitlements(_ ids: Set<String>) {
+        for id in ids {
+            guard let pack = StoreCatalog.pack(forProductID: id) else { continue }
+            _ = engine.grantPack(pack)
+        }
+        bump()
+    }
+
+    // MARK: - 온실과 대화
+
+    var visibleCharacters: [CharacterID] { engine.visibleCharacters }
+
+    func openDialogue(with character: CharacterID) {
+        if character.isExpansionCharacter {
+            guard let outcome = engine.talk(to: character) else {
+                showToast(engine.lastMessage)
+                return
+            }
+            dialogue = outcome
+            if outcome.gain > 0 { Haptics.success() }
+        } else {
+            selectedCharacter = character
+        }
+        bump()
+    }
+
+    func openGreenhouseWelcome() {
+        if let outcome = engine.greenhouseWelcome() {
+            dialogue = outcome
+        } else {
+            showToast(engine.lastMessage)
+        }
+        bump()
+    }
+
+    func closeDialogue() {
+        dialogue = nil
+        bump()
     }
 
     // MARK: - 저장
@@ -362,5 +678,9 @@ final class GameStore: ObservableObject {
             guard !Task.isCancelled else { return }
             self?.toast = nil
         }
+    }
+
+    private func bump() {
+        revision &+= 1
     }
 }

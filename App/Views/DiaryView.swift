@@ -40,7 +40,9 @@ struct DiaryView: View {
                 Text("숲 일기장")
                     .font(.story(16, weight: .semibold))
                     .foregroundStyle(ForestPalette.ink)
-                Text("\(store.diaryEntriesUnlocked) / \(ForestDiary.totalCount) 칸")
+                Text(store.showsExpandedDiary
+                     ? "\(store.diaryEntriesUnlocked)/\(ForestDiary.totalCount) 칸 · 확장 \(store.expandedDiaryUnlocked)/\(store.expandedDiaryTotal)"
+                     : "\(store.diaryEntriesUnlocked) / \(ForestDiary.totalCount) 칸")
                     .font(.story(11))
                     .foregroundStyle(ForestPalette.inkSoft)
             }
@@ -81,8 +83,12 @@ struct DiaryView: View {
     }
 
     private var entries: [DiaryEntry] {
-        guard let kind = selectedKind else { return ForestDiary.entries }
-        return ForestDiary.entries(kind: kind)
+        let base = selectedKind == nil ? ForestDiary.entries : ForestDiary.entries(kind: selectedKind!)
+        guard store.showsExpandedDiary else { return base }
+        let extras = selectedKind == nil
+            ? ForestDiary.expandedEntries
+            : ForestDiary.expandedEntries.filter { $0.kind == selectedKind }
+        return base + extras
     }
 
     private func entryCard(_ entry: DiaryEntry) -> some View {

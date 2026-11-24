@@ -7,23 +7,56 @@ struct NeighboursView: View {
     @State private var giftingTo: CharacterID?
 
     var body: some View {
-        VStack(spacing: 8) {
-            header
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 12) {
-                    ForEach(CharacterID.allCases) { character in
-                        card(for: character)
+        ZStack {
+            VStack(spacing: 8) {
+                header
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 12) {
+                        ForEach(store.visibleCharacters) { character in
+                            card(for: character)
+                        }
+                        if !store.ownsGreenhouse {
+                            lockedNeighboursCard
+                        }
                     }
+                    .padding(.horizontal, 18)
+                    .padding(.bottom, 24)
                 }
-                .padding(.horizontal, 18)
-                .padding(.bottom, 24)
+            }
+            .padding(.top, 6)
+
+            if let outcome = store.dialogue {
+                DialogueOverlay(outcome: outcome)
             }
         }
-        .padding(.top, 6)
         .sheet(item: $giftingTo) { character in
             GiftSheet(character: character)
                 .environmentObject(store)
         }
+    }
+
+    private var lockedNeighboursCard: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 10))
+                    .foregroundStyle(ForestPalette.inkSoft)
+                Text("아직 만나지 못한 이웃 2명")
+                    .font(.story(14, weight: .semibold))
+                    .foregroundStyle(ForestPalette.inkSoft)
+            }
+            Text("사계절 온실 확장팩을 열면 사슴 루나와 수달 코코가 온실에서 기다립니다.")
+                .font(.story(12))
+                .foregroundStyle(ForestPalette.inkSoft)
+                .fixedSize(horizontal: false, vertical: true)
+            Button("상점에서 보기") {
+                store.openStore()
+            }
+            .buttonStyle(QuietButtonStyle(tint: ForestPalette.terracotta))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .storybookCard()
+        .opacity(0.9)
     }
 
     private var header: some View {
@@ -105,14 +138,31 @@ struct NeighboursView: View {
                     .foregroundStyle(ForestPalette.inkSoft)
             }
 
-            Button {
-                giftingTo = character
-            } label: {
-                Text("선물하기")
+            HStack(spacing: 8) {
+                Button {
+                    giftingTo = character
+                } label: {
+                    Text("선물하기")
+                }
+                .buttonStyle(QuietButtonStyle(tint: ForestPalette.terracotta))
+                .disabled(store.giftableRecipes().isEmpty)
+                .opacity(store.giftableRecipes().isEmpty ? 0.45 : 1)
+
+                if character.isExpansionCharacter {
+                    Button {
+                        store.openDialogue(with: character)
+                    } label: {
+                        Text(store.state.hasTalked(to: character) ? "다시 대화" : "대화하기")
+                    }
+                    .buttonStyle(QuietButtonStyle(tint: ForestPalette.sage))
+                }
+                Spacer()
+                if character.isExpansionCharacter {
+                    Text("온실지기")
+                        .font(.label(9))
+                        .foregroundStyle(ForestPalette.moonflake)
+                }
             }
-            .buttonStyle(QuietButtonStyle(tint: ForestPalette.terracotta))
-            .disabled(store.giftableRecipes().isEmpty)
-            .opacity(store.giftableRecipes().isEmpty ? 0.45 : 1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .storybookCard()

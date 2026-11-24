@@ -9,6 +9,7 @@ struct LittleAcornForestApp: App {
         WindowGroup {
             RootView()
                 .environmentObject(store)
+                .environmentObject(store.purchases)
                 .preferredColorScheme(.light)
                 .tint(ForestPalette.sage)
         }
@@ -31,6 +32,11 @@ struct RootView: View {
                 case .cooking: CookingView()
                 case .diary: DiaryView()
                 case .neighbours: NeighboursView()
+                case .shelf: ShelfView()
+                case .mailbox: MailboxView()
+                case .focus: FocusTimerView()
+                case .store: StoreView()
+                case .greenhouse: GreenhouseView()
                 }
             }
             .transition(.opacity)
@@ -44,5 +50,8 @@ struct RootView: View {
         }
         .animation(.easeInOut(duration: 0.26), value: store.screen)
         .animation(.easeInOut(duration: 0.22), value: store.toast)
+        .task {
+            await store.prepareStore()
+        }
     }
 }

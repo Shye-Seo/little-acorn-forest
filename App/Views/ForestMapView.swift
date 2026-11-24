@@ -8,12 +8,14 @@ struct ForestMapView: View {
     var body: some View {
         VStack(spacing: 8) {
             header
+            moonRow
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 12) {
                     storyCard
                     mapCard
                     goalsCard
                     statsCard
+                    expansionCard
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 16)
@@ -58,6 +60,14 @@ struct ForestMapView: View {
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
                 .background(Capsule().fill(ForestPalette.sage.opacity(0.12)))
+        }
+        .padding(.horizontal, 16)
+    }
+
+    private var moonRow: some View {
+        HStack(spacing: 8) {
+            MoonBadgeView()
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, 16)
     }
@@ -122,7 +132,7 @@ struct ForestMapView: View {
                             LocationNode(
                                 location: location,
                                 locked: !store.isLocationUnlocked(location),
-                                highlighted: location == .festivalGlade && store.state.status(of: .epilogue) != .locked
+                                highlighted: highlighted(location)
                             )
                         }
                         .buttonStyle(.plain)
@@ -133,11 +143,18 @@ struct ForestMapView: View {
                     }
                 }
             }
-            .frame(height: 320)
+            .frame(height: 340)
             .background(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .fill(ForestPalette.parchmentDeep.opacity(0.55))
             )
+
+            if !store.isMoonlitGardenOpen {
+                Text(store.moonGardenLine)
+                    .font(.story(10))
+                    .foregroundStyle(ForestPalette.inkSoft)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .storybookCard(padding: 14)
     }
@@ -180,11 +197,77 @@ struct ForestMapView: View {
                 value: Double(store.diaryEntriesUnlocked) / Double(max(1, ForestDiary.totalCount)),
                 tint: ForestPalette.terracotta
             )
-            Text("일기장 \(store.diaryEntriesUnlocked)/\(ForestDiary.totalCount) 칸")
+            Text("일기장 \(store.diaryEntriesUnlocked)/\(ForestDiary.totalCount) 칸 · 선반 \(store.shelfJars.count)/\(JarShelf.capacity)병")
                 .font(.label(10))
                 .foregroundStyle(ForestPalette.inkSoft)
         }
         .storybookCard()
+    }
+
+    private var expansionCard: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            HStack {
+                SectionLabel(text: "오늘의 오두막")
+                Spacer()
+                Text("🪶 \(store.fireflyDust)")
+                    .font(.label(10))
+                    .foregroundStyle(ForestPalette.sage)
+            }
+            HStack(spacing: 8) {
+                shortcut(title: "우체통", detail: store.mailBadgeCount > 0 ? "\(store.mailBadgeCount)통" : "조용", icon: "envelope") {
+                    store.openMailbox()
+                }
+                shortcut(title: "선반", detail: "\(store.shelfJars.count)병", icon: "square.grid.3x3") {
+                    store.openShelf()
+                }
+                shortcut(title: "모닥불", detail: store.focusSession == nil ? "집중" : "진행 중", icon: "flame") {
+                    store.openFocus()
+                }
+                shortcut(title: "상점", detail: store.state.purchasedPacks.isEmpty ? "확장팩" : "\(store.state.purchasedPacks.count)팩", icon: "bag") {
+                    store.openStore()
+                }
+            }
+            if store.isLocationUnlocked(.greenhouse) {
+                Button {
+                    store.openGreenhouse()
+                } label: {
+                    Label("사계절 온실로", systemImage: "leaf.circle")
+                }
+                .buttonStyle(QuietButtonStyle(tint: ForestPalette.sage))
+            } else if store.ownsGreenhouse {
+                Text("온실 문은 에필로그를 마친 다음 날 열립니다.")
+                    .font(.story(10))
+                    .foregroundStyle(ForestPalette.inkSoft)
+            } else {
+                Text("에필로그 뒤에 열리는 사계절 온실은 상점에서 열 수 있어요.")
+                    .font(.story(10))
+                    .foregroundStyle(ForestPalette.inkSoft)
+            }
+        }
+        .storybookCard()
+    }
+
+    private func shortcut(title: String, detail: String, icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 3) {
+                Image(systemName: icon)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(ForestPalette.sage)
+                Text(title)
+                    .font(.label(10))
+                    .foregroundStyle(ForestPalette.ink)
+                Text(detail)
+                    .font(.label(8))
+                    .foregroundStyle(ForestPalette.inkSoft)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    .fill(ForestPalette.parchmentDeep.opacity(0.45))
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     private var bottomBar: some View {
@@ -203,6 +286,13 @@ struct ForestMapView: View {
             }
             .buttonStyle(QuietButtonStyle())
 
+            Button {
+                store.openMailbox()
+            } label: {
+                Label(store.mailBadgeCount > 0 ? "우체통 \(store.mailBadgeCount)" : "우체통", systemImage: "envelope")
+            }
+            .buttonStyle(QuietButtonStyle(tint: store.mailBadgeCount > 0 ? ForestPalette.terracotta : ForestPalette.sage))
+
             Spacer()
 
             Button {
@@ -220,16 +310,32 @@ struct ForestMapView: View {
         Set(ForestLocation.allCases.filter { store.isLocationUnlocked($0) })
     }
 
+    private func highlighted(_ location: ForestLocation) -> Bool {
+        switch location {
+        case .festivalGlade:
+            return store.state.status(of: .epilogue) != .locked
+        case .moonlitGarden:
+            return store.isMoonlitGardenOpen
+        case .greenhouse:
+            return store.isLocationUnlocked(.greenhouse)
+        default:
+            return false
+        }
+    }
+
     private func visit(_ location: ForestLocation) {
         guard store.isLocationUnlocked(location) else {
             Haptics.warning()
-            store.showToast("\(location.title)은 아직 열리지 않았어요. 이야기를 더 진행해 주세요.")
+            store.showToast(store.lockMessage(for: location))
             return
         }
         Haptics.tap()
-        if location == .cabinKitchen {
+        switch location {
+        case .cabinKitchen:
             store.openCooking()
-        } else {
+        case .greenhouse:
+            store.openGreenhouse()
+        default:
             store.openGathering(at: location)
         }
     }
@@ -249,15 +355,15 @@ struct LocationNode: View {
                 Circle()
                     .stroke(highlighted ? ForestPalette.terracotta : ForestPalette.sage.opacity(locked ? 0.25 : 0.55), lineWidth: highlighted ? 2 : 1.2)
                 Image(systemName: location.symbolName)
-                    .font(.system(size: 19, weight: .medium))
+                    .font(.system(size: 18, weight: .medium))
                     .foregroundStyle(locked ? ForestPalette.inkSoft.opacity(0.45) : ForestPalette.sageDeep)
             }
-            .frame(width: 50, height: 50)
+            .frame(width: 48, height: 48)
 
             Text(location.title)
-                .font(.label(10))
+                .font(.label(9))
                 .foregroundStyle(locked ? ForestPalette.inkSoft.opacity(0.55) : ForestPalette.ink)
-                .padding(.horizontal, 6)
+                .padding(.horizontal, 5)
                 .padding(.vertical, 2)
                 .background(Capsule().fill(ForestPalette.parchment.opacity(0.8)))
         }
@@ -290,6 +396,8 @@ extension ForestLocation {
         case .fireflyPond: return "drop.fill"
         case .owlLibrary: return "book.fill"
         case .festivalGlade: return "sparkles"
+        case .moonlitGarden: return "moon.stars.fill"
+        case .greenhouse: return "leaf.circle.fill"
         }
     }
 }

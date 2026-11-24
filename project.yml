@@ -12,6 +12,8 @@ settings:
     MARKETING_VERSION: "1.0.0"
     CURRENT_PROJECT_VERSION: "1"
     DEVELOPMENT_TEAM: ""
+fileGroups:
+  - Products.storekit
 packages:
   AcornForestCore:
     path: Packages/AcornForestCore

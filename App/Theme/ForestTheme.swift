@@ -59,6 +59,10 @@ extension Ingredient {
         case .fireflyNectar: return ForestPalette.honey
         case .starMossShroom: return ForestPalette.starmoss
         case .moonflakeSpice: return ForestPalette.moonflake
+        case .moonlitDew: return ForestPalette.moonlight
+        case .cherryHoney: return ForestPalette.berry
+        case .mapleSap: return ForestPalette.chestnut
+        case .snowBlossom: return ForestPalette.dew
         }
     }
 }
@@ -70,8 +74,15 @@ extension CharacterID {
         case .songi: return ForestPalette.sageDeep
         case .mong: return ForestPalette.honey
         case .rubi: return ForestPalette.terracotta
+        case .luna: return ForestPalette.moonflake
+        case .coco: return ForestPalette.dew
         }
     }
+}
+
+extension CabinStyle {
+    var wallColor: Color { Color(hex: wallHex) }
+    var lampColor: Color { Color(hex: lampHex) }
 }
 
 /// 양피지 질감의 배경. 위아래로 아주 옅은 그라데이션과 종이 알갱이를 얹는다.

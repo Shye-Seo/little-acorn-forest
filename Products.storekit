@@ -1,0 +1,86 @@
+{
+  "identifier" : "3F6C2A19-7D54-4E0B-9C31-3A6B5D2E8F01",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "4400",
+      "familyShareable" : false,
+      "internalID" : "6741000001",
+      "localizations" : [
+        {
+          "description" : "에필로그 뒤에 열리는 유리 지붕 온실. 봄 벚꽃꿀 잼·가을 단풍 콩포트·겨울 눈꽃 잼과 온실지기 루나·코코가 함께 열립니다.",
+          "displayName" : "사계절 온실 확장팩",
+          "locale" : "ko_KR"
+        },
+        {
+          "description" : "A four-season greenhouse with three new jams and two new neighbours.",
+          "displayName" : "Four-Season Greenhouse",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.quoguri.moonlightjamjar.greenhouse",
+      "referenceName" : "Greenhouse Expansion Pack",
+      "type" : "NonConsumable"
+    },
+    {
+      "displayPrice" : "2500",
+      "familyShareable" : false,
+      "internalID" : "6741000002",
+      "localizations" : [
+        {
+          "description" : "크리스탈 병과 별 모양 마개, 그리고 오두막 벽지·조명 스킨 3종. 선반과 집중 타이머 배경에 바로 반영됩니다.",
+          "displayName" : "빈티지 병 공방 스킨",
+          "locale" : "ko_KR"
+        },
+        {
+          "description" : "Crystal jars, star caps, and three cabin wallpaper and lighting skins.",
+          "displayName" : "Vintage Bottle Workshop Skins",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.quoguri.moonlightjamjar.bottleskins",
+      "referenceName" : "Bottle Workshop Skins",
+      "type" : "NonConsumable"
+    },
+    {
+      "displayPrice" : "1900",
+      "familyShareable" : false,
+      "internalID" : "6741000003",
+      "localizations" : [
+        {
+          "description" : "모닥불 집중 타이머에 밤벌레·풍경소리 트랙을 더하고, 타이머 보상을 두 배로 받습니다.",
+          "displayName" : "모닥불 ASMR 트랙 팩",
+          "locale" : "ko_KR"
+        },
+        {
+          "description" : "Two extra ambience tracks for the campfire focus timer and double rewards.",
+          "displayName" : "Campfire ASMR Track Pack",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.quoguri.moonlightjamjar.asmrpack",
+      "referenceName" : "Campfire ASMR Track Pack",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6741000000",
+    "_developerTeamID" : "",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 0,
+    "_locale" : "ko_KR",
+    "_storefront" : "KOR",
+    "_storeKitErrors" : [
+
+    ]
+  },
+  "subscriptionGroups" : [
+
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}
