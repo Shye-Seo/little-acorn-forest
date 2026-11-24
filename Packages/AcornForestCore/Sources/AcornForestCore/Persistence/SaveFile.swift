@@ -37,6 +37,7 @@ public enum SaveError: Error, Equatable {
 
 public enum SaveCodec {
     public static let dateStrategy: JSONEncoder.DateEncodingStrategy = .iso8601
+    public static let decodingStrategy: JSONDecoder.DateDecodingStrategy = .iso8601
 
     public static func makeEncoder() -> JSONEncoder {
         let encoder = JSONEncoder()
@@ -47,7 +48,7 @@ public enum SaveCodec {
 
     public static func makeDecoder() -> JSONDecoder {
         let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = dateStrategy
+        decoder.dateDecodingStrategy = decodingStrategy
         return decoder
     }
 
