@@ -266,7 +266,7 @@ little-acorn-forest/
 │   │   └── GameEngine.swift         # 게임의 두뇌
 │   └── Tests/AcornForestCoreTests/  # 147개 단위 테스트
 ├── Tests/                           # 앱 타깃 테스트 8개
-└── scripts/verify_project.py        # 정적 검사 + 규칙 미러링 검증(197개)
+└── scripts/verify_project.py        # 정적 검사 + 규칙 미러링 검증(205개)
 ```
 
 ### 설계 메모
@@ -340,7 +340,7 @@ open LittleAcornForest.xcodeproj
 # Core 규칙 테스트 (147개) — macOS / Linux 모두 가능
 swift test --package-path Packages/AcornForestCore
 
-# Swift 없이도 돌아가는 정적 검사 + 규칙 미러링 (197개)
+# Swift 없이도 돌아가는 정적 검사 + 규칙 미러링 (205개)
 python3 scripts/verify_project.py
 ```
 
