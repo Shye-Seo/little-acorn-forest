@@ -160,20 +160,29 @@ public struct CookingOutcome: Sendable, Equatable {
     public let gainedDiary: [String]
     public let isNewRecipe: Bool
     public let message: String
+    /// 완성 순간의 달 위상이 남긴 축복. 위상 효과가 있으면 값이 들어온다.
+    public let blessing: MoonBlessing?
 
     public init(recipe: Recipe?,
                 attempted: [Ingredient],
                 quality: CookingQuality,
                 gainedDiary: [String],
                 isNewRecipe: Bool,
-                message: String) {
+                message: String,
+                blessing: MoonBlessing? = nil) {
         self.recipe = recipe
         self.attempted = attempted
         self.quality = quality
         self.gainedDiary = gainedDiary
         self.isNewRecipe = isNewRecipe
         self.message = message
+        self.blessing = blessing
     }
 
     public var succeeded: Bool { recipe != nil }
+
+    public var blessingLine: String {
+        guard let blessing, blessing.hasEffect else { return "" }
+        return "\(blessing.phase.emoji) \(blessing.title) · \(blessing.effectLine)"
+    }
 }

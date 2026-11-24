@@ -1,11 +1,15 @@
 import Foundation
 
 /// 숲에 사는 이웃들. 주인공 '보리'는 이 목록 밖의 화자로 다룬다.
+/// 앞의 네 명은 프롤로그부터 만나는 숲의 이웃이고,
+/// 뒤의 두 명은 사계절 온실 확장팩에서 처음 만나는 온실지기다.
 public enum CharacterID: String, CaseIterable, Codable, Identifiable, Sendable {
     case tori
     case songi
     case mong
     case rubi
+    case luna
+    case coco
 
     public var id: String { rawValue }
 
@@ -15,6 +19,8 @@ public enum CharacterID: String, CaseIterable, Codable, Identifiable, Sendable {
         case .songi: return "송이"
         case .mong: return "몽"
         case .rubi: return "루비"
+        case .luna: return "루나"
+        case .coco: return "코코"
         }
     }
 
@@ -24,6 +30,8 @@ public enum CharacterID: String, CaseIterable, Codable, Identifiable, Sendable {
         case .songi: return "고슴도치"
         case .mong: return "올빼미"
         case .rubi: return "여우"
+        case .luna: return "사슴"
+        case .coco: return "수달"
         }
     }
 
@@ -37,6 +45,10 @@ public enum CharacterID: String, CaseIterable, Codable, Identifiable, Sendable {
             return "밤에만 눈을 뜨는 서재지기. 감정을 말로 잘 하지 않아서, 다정함은 늘 책갈피에 끼워 두고 산다."
         case .rubi:
             return "숲에서 제일 수다스럽다. 소문을 옮기는 걸 좋아하지만, 정작 어려운 이웃의 이야기는 함부로 꺼내지 않는다."
+        case .luna:
+            return "유리 지붕 아래에서 계절을 옮겨 심는 사슴. 말수는 적지만 밤에 별을 세는 일만은 끝까지 해 둔다."
+        case .coco:
+            return "온실 연못에서 조약돌을 굴리며 사는 수달. 손이 빠르고 웃음이 잦아서, 온실의 물소리가 코코 소리처럼 들릴 때가 있다."
         }
     }
 
@@ -46,6 +58,8 @@ public enum CharacterID: String, CaseIterable, Codable, Identifiable, Sendable {
         case .songi: return "moonshadow-herb-jelly"
         case .mong: return "starlight-mist-jam"
         case .rubi: return "firefly-sparkle-jam"
+        case .luna: return "winter-snow-jam"
+        case .coco: return "spring-blossom-honey-jam"
         }
     }
 
@@ -55,6 +69,8 @@ public enum CharacterID: String, CaseIterable, Codable, Identifiable, Sendable {
         case .songi: return ["meteor-berry-compote", "starlight-mist-jam"]
         case .mong: return ["dawn-dew-jam"]
         case .rubi: return ["cloud-cotton-marmalade"]
+        case .luna: return ["spring-blossom-honey-jam", "autumn-maple-compote"]
+        case .coco: return ["autumn-maple-compote", "winter-snow-jam"]
         }
     }
 
@@ -64,6 +80,8 @@ public enum CharacterID: String, CaseIterable, Codable, Identifiable, Sendable {
         case .songi: return ["firefly-sparkle-jam"]
         case .mong: return ["meteor-berry-compote"]
         case .rubi: return ["dawn-dew-jam"]
+        case .luna: return ["firefly-sparkle-jam"]
+        case .coco: return ["moonshadow-herb-jelly"]
         }
     }
 
@@ -78,6 +96,10 @@ public enum CharacterID: String, CaseIterable, Codable, Identifiable, Sendable {
             return "서재 창문으로 별이 한 번 더 들어오는 밤"
         case .rubi:
             return "숲 전체가 같이 웃는 노래"
+        case .luna:
+            return "겨울에도 얼지 않는 화분 하나"
+        case .coco:
+            return "봄이 오는 날을 누군가와 같이 세는 것"
         }
     }
 
@@ -87,7 +109,24 @@ public enum CharacterID: String, CaseIterable, Codable, Identifiable, Sendable {
         case .songi: return "등의 가시에 잎사귀가 한 장 걸려 있다."
         case .mong: return "목에 두른 목도리는 스스로 짠 것."
         case .rubi: return "꼬리 끝이 늘 살짝 젖어 있다."
+        case .luna: return "뿔 한쪽에 눈이 쌓여 있다. 털어도 다음 날이면 다시 쌓인다."
+        case .coco: return "털 끝이 늘 젖어 있고, 손에는 조약돌을 하나 쥐고 있다."
         }
+    }
+
+    /// 프롤로그~에필로그의 숲을 이루는 네 이웃.
+    public static var coreNeighbours: [CharacterID] {
+        [.tori, .songi, .mong, .rubi]
+    }
+
+    /// 사계절 온실 확장팩에서 만나는 온실지기.
+    public static var expansionNeighbours: [CharacterID] {
+        [.luna, .coco]
+    }
+
+    /// 확장팩 없이도 만날 수 있는 이웃인지.
+    public var isExpansionCharacter: Bool {
+        CharacterID.expansionNeighbours.contains(self)
     }
 }
 

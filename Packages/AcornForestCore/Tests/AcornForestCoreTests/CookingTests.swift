@@ -67,6 +67,7 @@ final class CookingTests: XCTestCase {
             ItemStack(.dewberry, 2)
         ])
         let engine = GameEngine(saveStore: InMemorySaveStore(), state: state)
+        engine.moonClock = MoonClock(overridePhase: .waning)
         XCTAssertTrue(engine.startCooking(ingredients: [.dewberry, .dewberry]))
         TestSupport.stirToPerfect(engine)
         let outcome = engine.finishCooking()
@@ -74,6 +75,7 @@ final class CookingTests: XCTestCase {
         XCTAssertEqual(outcome?.isNewRecipe, true)
         XCTAssertEqual(engine.state.count(of: .dewberry), 0)
         XCTAssertEqual(engine.state.servings(of: "dawn-dew-jam"), 1)
+        XCTAssertEqual(engine.state.count(of: .moonflakeSpice), 1, "그믐달 축복으로 향신료 한 줌")
         XCTAssertTrue(engine.state.hasDiary("recipe.dawn-dew-jam"))
         XCTAssertEqual(engine.state.stats.cooks, 1)
     }

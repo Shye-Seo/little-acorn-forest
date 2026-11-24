@@ -44,7 +44,7 @@ final class SaveRestoreTests: XCTestCase {
         let store = InMemorySaveStore()
         let first = GameEngine(saveStore: store)
         first.startNewGame()
-        XCTAssertTrue(first.startGathering(at: .berryPatch, seed: 21))
+        XCTAssertTrue(first.startGathering(at: .cabinKitchen, seed: 21))
         TestSupport.catchEverything(first)
         _ = TestSupport.playChapter(first, .prologue)
 

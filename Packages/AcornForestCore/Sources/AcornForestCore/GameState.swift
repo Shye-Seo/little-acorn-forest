@@ -24,6 +24,8 @@ public struct CookedRecord: Codable, Hashable, Sendable, Identifiable {
     public var timesCooked: Int
     public var perfectCount: Int
     public var bestQuality: CookingQuality
+    /// 이 잼을 담글 때 달이 남긴 축복 태그(예: "blessing.fullMoon").
+    public var blessingTags: [String]
 
     public var id: String { recipeID }
 
@@ -31,12 +33,33 @@ public struct CookedRecord: Codable, Hashable, Sendable, Identifiable {
                 servings: Int = 1,
                 timesCooked: Int = 1,
                 perfectCount: Int = 0,
-                bestQuality: CookingQuality = .good) {
+                bestQuality: CookingQuality = .good,
+                blessingTags: [String] = []) {
         self.recipeID = recipeID
         self.servings = servings
         self.timesCooked = timesCooked
         self.perfectCount = perfectCount
         self.bestQuality = bestQuality
+        self.blessingTags = blessingTags
+    }
+
+    public var blessingLine: String {
+        blessingTags.first ?? ""
+    }
+
+    private enum CookedCodingKeys: String, CodingKey {
+        case recipeID, servings, timesCooked, perfectCount, bestQuality, blessingTags
+    }
+
+    /// 달 축복 태그가 생기기 전의 저장 파일도 열린다.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CookedCodingKeys.self)
+        recipeID = try container.decode(String.self, forKey: .recipeID)
+        servings = try container.decodeIfPresent(Int.self, forKey: .servings) ?? 1
+        timesCooked = try container.decodeIfPresent(Int.self, forKey: .timesCooked) ?? 1
+        perfectCount = try container.decodeIfPresent(Int.self, forKey: .perfectCount) ?? 0
+        bestQuality = try container.decodeIfPresent(CookingQuality.self, forKey: .bestQuality) ?? .good
+        blessingTags = try container.decodeIfPresent([String].self, forKey: .blessingTags) ?? []
     }
 }
 
@@ -72,6 +95,31 @@ public struct GameState: Codable, Hashable, Sendable {
     public var startedAt: Date
     public var completedChapters: [StoryChapter]
 
+    // MARK: 확장 기능이 저장하는 것들
+
+    /// 다락 선반에 진열한 잼 병.
+    public var jars: [CustomJamJar]
+    /// 현관 우체통에 남아 있는 편지.
+    public var mailbox: [MailboxLetter]
+    /// 우체통을 마지막으로 확인한 날(UTC 일련번호).
+    public var lastMailCheckDay: Int
+    /// 산 확장팩.
+    public var purchasedPacks: [ContentPack]
+    /// 오두막 벽지·조명 스킨.
+    public var cabinStyle: CabinStyle
+    /// 집중 타이머로 모은 반딧불이 가루.
+    public var fireflyDust: Int
+    public var focusSessions: Int
+    public var focusMinutes: Int
+    /// 우체통 쪽지로 배운 비밀 레시피 id.
+    public var secretRecipes: [String]
+    /// 첫 대화를 끝까지 읽은 이웃.
+    public var talkedCharacters: [CharacterID]
+    /// 달 위상 디버그 고정값(설정 화면에서만 바뀐다).
+    public var debugMoonOverride: MoonPhase?
+    /// 디버그용 '하루 넘기기'로 밀린 날짜.
+    public var debugDayShift: Int
+
     public init(startedAt: Date = Date()) {
         self.formatVersion = GameState.currentFormatVersion
         self.chapters = StoryChapter.ordered.map {
@@ -86,6 +134,57 @@ public struct GameState: Codable, Hashable, Sendable {
         self.storyPosition = nil
         self.startedAt = startedAt
         self.completedChapters = []
+        self.jars = []
+        self.mailbox = []
+        self.lastMailCheckDay = 0
+        self.purchasedPacks = []
+        self.cabinStyle = .attic
+        self.fireflyDust = 0
+        self.focusSessions = 0
+        self.focusMinutes = 0
+        self.secretRecipes = []
+        self.talkedCharacters = []
+        self.debugMoonOverride = nil
+        self.debugDayShift = 0
+    }
+
+    // MARK: - 구버전 저장 파일 호환
+
+    private enum CodingKeys: String, CodingKey {
+        case formatVersion, chapters, affinity, inventory, cooked, diary, flags, stats
+        case storyPosition, startedAt, completedChapters
+        case jars, mailbox, lastMailCheckDay, purchasedPacks, cabinStyle
+        case fireflyDust, focusSessions, focusMinutes, secretRecipes, talkedCharacters
+        case debugMoonOverride, debugDayShift
+    }
+
+    /// 확장 기능이 생기기 전의 저장 파일에도 열리도록, 새 필드는 없으면 기본값으로 채운다.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let fresh = GameState()
+        formatVersion = try container.decodeIfPresent(Int.self, forKey: .formatVersion) ?? fresh.formatVersion
+        chapters = try container.decodeIfPresent([ChapterProgress].self, forKey: .chapters) ?? fresh.chapters
+        affinity = try container.decodeIfPresent([AffinityState].self, forKey: .affinity) ?? fresh.affinity
+        inventory = try container.decodeIfPresent([ItemStack].self, forKey: .inventory) ?? []
+        cooked = try container.decodeIfPresent([CookedRecord].self, forKey: .cooked) ?? []
+        diary = try container.decodeIfPresent([String].self, forKey: .diary) ?? []
+        flags = try container.decodeIfPresent([String].self, forKey: .flags) ?? []
+        stats = try container.decodeIfPresent(PlayerStats.self, forKey: .stats) ?? PlayerStats()
+        storyPosition = try container.decodeIfPresent(StoryPosition.self, forKey: .storyPosition)
+        startedAt = try container.decodeIfPresent(Date.self, forKey: .startedAt) ?? Date()
+        completedChapters = try container.decodeIfPresent([StoryChapter].self, forKey: .completedChapters) ?? []
+        jars = try container.decodeIfPresent([CustomJamJar].self, forKey: .jars) ?? []
+        mailbox = try container.decodeIfPresent([MailboxLetter].self, forKey: .mailbox) ?? []
+        lastMailCheckDay = try container.decodeIfPresent(Int.self, forKey: .lastMailCheckDay) ?? 0
+        purchasedPacks = try container.decodeIfPresent([ContentPack].self, forKey: .purchasedPacks) ?? []
+        cabinStyle = try container.decodeIfPresent(CabinStyle.self, forKey: .cabinStyle) ?? .attic
+        fireflyDust = try container.decodeIfPresent(Int.self, forKey: .fireflyDust) ?? 0
+        focusSessions = try container.decodeIfPresent(Int.self, forKey: .focusSessions) ?? 0
+        focusMinutes = try container.decodeIfPresent(Int.self, forKey: .focusMinutes) ?? 0
+        secretRecipes = try container.decodeIfPresent([String].self, forKey: .secretRecipes) ?? []
+        talkedCharacters = try container.decodeIfPresent([CharacterID].self, forKey: .talkedCharacters) ?? []
+        debugMoonOverride = try container.decodeIfPresent(MoonPhase.self, forKey: .debugMoonOverride)
+        debugDayShift = try container.decodeIfPresent(Int.self, forKey: .debugDayShift) ?? 0
     }
 
     // MARK: - 챕터
@@ -190,6 +289,7 @@ public struct GameState: Codable, Hashable, Sendable {
         } else {
             affinity.append(AffinityState(character: character, points: AffinitySystem.clamped(amount)))
         }
+        unlockDialogueIfNeeded(for: character)
     }
 
     public mutating func recordGift(to character: CharacterID) {
@@ -202,6 +302,18 @@ public struct GameState: Codable, Hashable, Sendable {
         CharacterID.allCases.filter { affinityPoints(for: $0) > 0 }
     }
 
+    /// 확장팩을 사지 않아도 만나는 네 이웃.
+    public var coreNeighbourAffinities: [AffinityState] {
+        affinity.filter { !$0.character.isExpansionCharacter }
+    }
+
+    /// 지금 화면에 보여 줄 이웃. 온실 이웃은 확장팩을 가진 뒤에만 등장한다.
+    public var visibleCharacters: [CharacterID] {
+        CharacterID.allCases.filter { character in
+            !character.isExpansionCharacter || owns(.greenhouse)
+        }
+    }
+
     // MARK: - 요리
 
     public func record(for recipeID: String) -> CookedRecord? {
@@ -212,19 +324,26 @@ public struct GameState: Codable, Hashable, Sendable {
         record(for: recipeID)?.servings ?? 0
     }
 
-    public mutating func addCooked(recipeID: String, quality: CookingQuality) {
+    public mutating func addCooked(recipeID: String,
+                                   quality: CookingQuality,
+                                   blessingTag: String? = nil,
+                                   extraServings: Int = 0) {
         if let index = cooked.firstIndex(where: { $0.recipeID == recipeID }) {
-            cooked[index].servings += 1
+            cooked[index].servings += 1 + max(0, extraServings)
             cooked[index].timesCooked += 1
             if quality == .perfect { cooked[index].perfectCount += 1 }
             cooked[index].bestQuality = max(cooked[index].bestQuality, quality)
+            if let blessingTag, !cooked[index].blessingTags.contains(blessingTag) {
+                cooked[index].blessingTags.append(blessingTag)
+            }
         } else {
             cooked.append(CookedRecord(
                 recipeID: recipeID,
-                servings: 1,
+                servings: 1 + max(0, extraServings),
                 timesCooked: 1,
                 perfectCount: quality == .perfect ? 1 : 0,
-                bestQuality: quality
+                bestQuality: quality,
+                blessingTags: blessingTag.map { [$0] } ?? []
             ))
         }
     }
@@ -281,11 +400,143 @@ public struct GameState: Codable, Hashable, Sendable {
     }
 
     public var diaryProgress: DiaryProgress {
-        DiaryProgress(unlocked: diary.count, total: ForestDiary.totalCount)
+        let baseIDs = Set(ForestDiary.entries.map(\.id))
+        let unlocked = diary.filter { baseIDs.contains($0) }.count
+        return DiaryProgress(unlocked: unlocked, total: ForestDiary.totalCount)
+    }
+
+    /// 확장 콘텐츠로 늘어난 기록(온실 이웃·계절 레시피·비밀 레시피)의 진행도.
+    public var expandedDiaryProgress: DiaryProgress {
+        let extras = ForestDiary.expandedEntries
+        let unlocked = extras.filter { diary.contains($0.id) }.count
+        return DiaryProgress(unlocked: unlocked, total: extras.count)
     }
 
     public func unlockedDiaryEntries() -> [DiaryEntry] {
         ForestDiary.entries.filter { diary.contains($0.id) }
+    }
+
+    public func unlockedExpandedDiaryEntries() -> [DiaryEntry] {
+        ForestDiary.expandedEntries.filter { diary.contains($0.id) }
+    }
+
+    // MARK: - 확장팩
+
+    public func owns(_ pack: ContentPack) -> Bool {
+        purchasedPacks.contains(pack)
+    }
+
+    public func ownsWorkshop() -> Bool {
+        owns(.bottleWorkshop)
+    }
+
+    /// 새로 산 팩이면 true.
+    @discardableResult
+    public mutating func grant(_ pack: ContentPack) -> Bool {
+        guard !purchasedPacks.contains(pack) else { return false }
+        purchasedPacks.append(pack)
+        setFlag("store.owned.\(pack.rawValue)")
+        return true
+    }
+
+    public mutating func revoke(_ pack: ContentPack) {
+        purchasedPacks.removeAll { $0 == pack }
+        flags.removeAll { $0 == "store.owned.\(pack.rawValue)" }
+        if pack == .bottleWorkshop {
+            if CabinStyle.isUnlocked(cabinStyle, ownsWorkshop: false) == false {
+                cabinStyle = .attic
+            }
+        }
+    }
+
+    public var unlockedTracks: [AmbientTrack] {
+        AmbientTrack.tracks(ownsPack: owns(.asmrTracks))
+    }
+
+    public var unlockedBottles: [JarBottleStyle] {
+        JarStyleCatalog.bottles(ownsWorkshop: ownsWorkshop())
+    }
+
+    public var unlockedCaps: [JarCapStyle] {
+        JarStyleCatalog.caps(ownsWorkshop: ownsWorkshop())
+    }
+
+    public var unlockedCabinStyles: [CabinStyle] {
+        CabinStyle.styles(ownsWorkshop: ownsWorkshop())
+    }
+
+    // MARK: - 선반
+
+    public var shelfJars: [CustomJamJar] {
+        jars.sorted { $0.slot < $1.slot }
+    }
+
+    @discardableResult
+    public mutating func placeJar(_ jar: CustomJamJar) -> Bool {
+        guard !JarShelf.isFull(jars) else { return false }
+        var placed = jar
+        if placed.slot < 0 || placed.slot >= JarShelf.capacity || jars.contains(where: { $0.slot == placed.slot }) {
+            guard let slot = JarShelf.firstFreeSlot(in: jars) else { return false }
+            placed.slot = slot
+        }
+        jars = JarShelf.normalized(jars + [placed])
+        return true
+    }
+
+    @discardableResult
+    public mutating func removeJar(id: String) -> Bool {
+        guard let index = jars.firstIndex(where: { $0.id == id }) else { return false }
+        jars.remove(at: index)
+        jars = JarShelf.repacked(jars)
+        return true
+    }
+
+    public func jar(id: String) -> CustomJamJar? {
+        jars.first { $0.id == id }
+    }
+
+    public func jars(of recipeID: String) -> [CustomJamJar] {
+        jars.filter { $0.recipeID == recipeID }
+    }
+
+    // MARK: - 우체통
+
+    public var unclaimedLetters: [MailboxLetter] {
+        mailbox.filter { !$0.isClaimed }
+    }
+
+    public var unclaimedLetterCount: Int {
+        mailbox.filter { !$0.isClaimed }.count
+    }
+
+    public var sortedLetters: [MailboxLetter] {
+        mailbox.sorted { lhs, rhs in
+            if lhs.day == rhs.day { return lhs.deliveredAt > rhs.deliveredAt }
+            return lhs.day > rhs.day
+        }
+    }
+
+    /// 오늘 날짜(디버그 하루 넘기기 포함).
+    public func currentDay(at date: Date) -> Int {
+        MoonCalendar.dayIndex(at: date) + debugDayShift
+    }
+
+    // MARK: - 확장 이웃 대화
+
+    public func hasTalked(to character: CharacterID) -> Bool {
+        talkedCharacters.contains(character)
+    }
+
+    public mutating func markTalked(to character: CharacterID) {
+        guard !talkedCharacters.contains(character) else { return }
+        talkedCharacters.append(character)
+    }
+
+    /// 대화를 처음 읽었을 때 호감도를 주고, 단짝 문턱을 넘으면 두 번째 대화를 연다.
+    private mutating func unlockDialogueIfNeeded(for character: CharacterID) {
+        guard character.isExpansionCharacter else { return }
+        guard affinityPoints(for: character) >= AffinityLevel.close.rawValue else { return }
+        setFlag("dialogue.close.\(character.rawValue)")
     }
 
     // MARK: - 정리
@@ -304,5 +555,24 @@ public struct GameState: Codable, Hashable, Sendable {
         diary = Array(Set(diary)).sorted()
         flags = Array(Set(flags)).sorted()
         completedChapters = Array(Set(completedChapters)).sorted { $0.order < $1.order }
+        jars = JarShelf.normalized(jars)
+        purchasedPacks = Array(Set(purchasedPacks)).sorted { $0.rawValue < $1.rawValue }
+        secretRecipes = Array(Set(secretRecipes)).filter { SecretRecipeBook.recipe(id: $0) != nil }.sorted()
+        talkedCharacters = Array(Set(talkedCharacters)).sorted { $0.rawValue < $1.rawValue }
+        mailbox = mailbox
+            .filter { $0.day > 0 }
+            .sorted { $0.deliveredAt > $1.deliveredAt }
+        if mailbox.count > MailboxSystem.capacity {
+            let claimed = mailbox.filter(\.isClaimed)
+            let keeping = mailbox.filter { !$0.isClaimed }.prefix(MailboxSystem.capacity)
+            mailbox = Array(keeping) + claimed.prefix(max(0, MailboxSystem.capacity - keeping.count))
+        }
+        if CabinStyle.isUnlocked(cabinStyle, ownsWorkshop: ownsWorkshop()) == false {
+            cabinStyle = .attic
+        }
+        fireflyDust = max(0, fireflyDust)
+        focusSessions = max(0, focusSessions)
+        focusMinutes = max(0, focusMinutes)
+        debugDayShift = max(0, debugDayShift)
     }
 }

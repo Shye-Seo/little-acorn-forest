@@ -10,19 +10,27 @@ public struct Recipe: Identifiable, Codable, Hashable, Sendable {
     public let warmth: Int
     /// 이 잼이 처음 등장하는 이야기 지점(UI 안내용).
     public let minChapter: StoryChapter
+    /// 확장팩(사계절 온실)에서만 만날 수 있는 레시피인지.
+    public let lockedByPack: ContentPack?
+    /// 수첩에 없는 비밀 레시피인지. 우체통 쪽지로만 배울 수 있다.
+    public let isSecret: Bool
 
     public init(id: String,
                 name: String,
                 ingredients: [Ingredient],
                 story: String,
                 warmth: Int,
-                minChapter: StoryChapter) {
+                minChapter: StoryChapter,
+                lockedByPack: ContentPack? = nil,
+                isSecret: Bool = false) {
         self.id = id
         self.name = name
         self.ingredients = ingredients
         self.story = story
         self.warmth = warmth
         self.minChapter = minChapter
+        self.lockedByPack = lockedByPack
+        self.isSecret = isSecret
     }
 
     public var key: String { RecipeBook.key(for: ingredients) }
@@ -39,6 +47,11 @@ public struct Recipe: Identifiable, Codable, Hashable, Sendable {
     public var hasDistinctIngredients: Bool {
         Set(ingredients).count == ingredients.count
     }
+
+    /// 이 레시피가 확장 콘텐츠인지.
+    public var isExpansion: Bool {
+        lockedByPack != nil || isSecret || ingredients.contains { $0.isExpansionIngredient }
+    }
 }
 
 /// 레시피 목록과 조합 판정.
@@ -46,7 +59,8 @@ public struct Recipe: Identifiable, Codable, Hashable, Sendable {
 public enum RecipeBook {
     public static let maximumIngredientCount = 3
 
-    public static let all: [Recipe] = [
+    /// 프롤로그부터 에필로그까지 수첩에 실린 기본 레시피.
+    public static let base: [Recipe] = [
         Recipe(
             id: "dawn-dew-jam",
             name: "새벽이슬 잼",
@@ -105,27 +119,67 @@ public enum RecipeBook {
         )
     ]
 
+    /// 사계절 온실 확장팩과 우체통 쪽지로 열리는 레시피를 모두 포함한 목록.
+    public static var all: [Recipe] {
+        base + GreenhouseRecipes.all + SecretRecipeBook.all
+    }
+
     /// 재료를 순서 없이 늘어놓아 만든 조합 키. (예: "dewberry+fireflyNectar")
     public static func key(for ingredients: [Ingredient]) -> String {
         ingredients.map(\.rawValue).sorted().joined(separator: "+")
     }
 
-    public static func recipe(for ingredients: [Ingredient]) -> Recipe? {
+    /// 지금 배운 레시피만 대상으로 조합을 찾는다.
+    /// - Parameter unlockedSecretIDs: 우체통 쪽지로 배운 비밀 레시피 id.
+    public static func recipe(for ingredients: [Ingredient],
+                              unlockedSecretIDs: [String] = []) -> Recipe? {
         guard !ingredients.isEmpty else { return nil }
         let target = key(for: ingredients)
-        return all.first { $0.key == target }
+        return visibleRecipes(unlockedSecretIDs: unlockedSecretIDs, includesSeasonal: true)
+            .first { $0.key == target }
+    }
+
+    /// 확장 콘텐츠를 반영한 레시피 조회. 온실 레시피는 확장팩 보유 시에만 보인다.
+    public static func recipe(for ingredients: [Ingredient],
+                              unlockedSecretIDs: [String],
+                              includesSeasonal: Bool) -> Recipe? {
+        guard !ingredients.isEmpty else { return nil }
+        let target = key(for: ingredients)
+        return visibleRecipes(unlockedSecretIDs: unlockedSecretIDs, includesSeasonal: includesSeasonal)
+            .first { $0.key == target }
     }
 
     public static func recipe(id: String) -> Recipe? {
         all.first { $0.id == id }
     }
 
+    /// 화면과 조합 판정에 쓰는 "지금 배운" 레시피 목록.
+    public static func visibleRecipes(unlockedSecretIDs: [String],
+                                      includesSeasonal: Bool = true) -> [Recipe] {
+        base
+            + (includesSeasonal ? GreenhouseRecipes.all : [])
+            + SecretRecipeBook.all.filter { unlockedSecretIDs.contains($0.id) }
+    }
+
+    public static func visibleRecipes(for state: GameState) -> [Recipe] {
+        visibleRecipes(
+            unlockedSecretIDs: state.secretRecipes,
+            includesSeasonal: state.owns(.greenhouse)
+        )
+    }
+
     /// 조합에 실패했을 때 보여 줄 힌트. 가장 가까운 레시피를 골라 준다.
-    public static func closestRecipe(to ingredients: [Ingredient]) -> Recipe? {
+    public static func closestRecipe(to ingredients: [Ingredient],
+                                     unlockedSecretIDs: [String] = [],
+                                     includesSeasonal: Bool = false) -> Recipe? {
         guard !ingredients.isEmpty else { return nil }
         let target = Set(ingredients)
+        let candidates = visibleRecipes(
+            unlockedSecretIDs: unlockedSecretIDs,
+            includesSeasonal: includesSeasonal
+        )
         var best: (recipe: Recipe, overlap: Int, distance: Int)?
-        for recipe in all {
+        for recipe in candidates {
             let overlap = target.intersection(Set(recipe.ingredients)).count
             let distance = abs(recipe.ingredients.count - ingredients.count)
             if let current = best {
@@ -141,6 +195,6 @@ public enum RecipeBook {
 
     /// 아직 만들어 보지 않은 레시피 수를 세는 데 쓴다.
     public static func unCooked(in state: GameState) -> [Recipe] {
-        all.filter { state.record(for: $0.id) == nil }
+        visibleRecipes(for: state).filter { state.record(for: $0.id) == nil }
     }
 }

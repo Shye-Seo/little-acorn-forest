@@ -29,12 +29,12 @@ public enum ChapterRules {
             return state.stats.totalCaught >= 4 && state.cookedRecipeCount >= 1
         case .chapterThree:
             guard state.status(of: .chapterTwo) == .completed else { return false }
-            let greeted = CharacterID.allCases.filter { state.affinityPoints(for: $0) >= AffinityLevel.greeting.rawValue }
-            return greeted.count == CharacterID.allCases.count && state.cookedRecipeCount >= 3
+            let greeted = CharacterID.coreNeighbours.filter { state.affinityPoints(for: $0) >= AffinityLevel.greeting.rawValue }
+            return greeted.count == CharacterID.coreNeighbours.count && state.cookedRecipeCount >= 3
         case .epilogue:
             guard state.status(of: .chapterThree) == .completed else { return false }
-            let closeCount = CharacterID.allCases.filter { state.affinityPoints(for: $0) >= closeAffinityThreshold }.count
-            return state.cookedRecipeIDs.contains("golden-fullmoon-jam") && closeCount == CharacterID.allCases.count
+            let closeCount = CharacterID.coreNeighbours.filter { state.affinityPoints(for: $0) >= closeAffinityThreshold }.count
+            return state.cookedRecipeIDs.contains("golden-fullmoon-jam") && closeCount == CharacterID.coreNeighbours.count
         }
     }
 
@@ -57,14 +57,14 @@ public enum ChapterRules {
                 ChapterGoal(id: "ch2-cook", text: "요리를 한 번 만든다 (\(min(state.cookedRecipeCount, 1))/1)", isMet: state.cookedRecipeCount >= 1)
             ]
         case .chapterThree:
-            let greeted = CharacterID.allCases.filter { state.affinityPoints(for: $0) >= AffinityLevel.greeting.rawValue }.count
+            let greeted = CharacterID.coreNeighbours.filter { state.affinityPoints(for: $0) >= AffinityLevel.greeting.rawValue }.count
             return [
                 ChapterGoal(id: "ch3-chapter2", text: "2장을 마친다", isMet: previousDone(.chapterTwo)),
                 ChapterGoal(id: "ch3-greet", text: "네 이웃과 인사하는 사이가 된다 (\(greeted)/4)", isMet: greeted == 4),
                 ChapterGoal(id: "ch3-recipes", text: "서로 다른 요리 3가지를 만든다 (\(min(state.cookedRecipeCount, 3))/3)", isMet: state.cookedRecipeCount >= 3)
             ]
         case .epilogue:
-            let closeCount = CharacterID.allCases.filter { state.affinityPoints(for: $0) >= closeAffinityThreshold }.count
+            let closeCount = CharacterID.coreNeighbours.filter { state.affinityPoints(for: $0) >= closeAffinityThreshold }.count
             return [
                 ChapterGoal(id: "epi-chapter3", text: "3장을 마친다", isMet: previousDone(.chapterThree)),
                 ChapterGoal(id: "epi-moon-jam", text: "황금 보름달 잼을 담근다", isMet: state.cookedRecipeIDs.contains("golden-fullmoon-jam")),
@@ -94,10 +94,10 @@ public enum ChapterRules {
         case .chapterTwo:
             return state.status(of: .chapterOne) == .completed && state.stats.totalCaught >= 4 && state.cookedRecipeCount >= 1
         case .chapterThree:
-            let greeted = CharacterID.allCases.filter { state.affinityPoints(for: $0) >= AffinityLevel.greeting.rawValue }.count
+            let greeted = CharacterID.coreNeighbours.filter { state.affinityPoints(for: $0) >= AffinityLevel.greeting.rawValue }.count
             return state.status(of: .chapterTwo) == .completed && greeted == 4 && state.cookedRecipeCount >= 3
         case .epilogue:
-            let closeCount = CharacterID.allCases.filter { state.affinityPoints(for: $0) >= closeAffinityThreshold }.count
+            let closeCount = CharacterID.coreNeighbours.filter { state.affinityPoints(for: $0) >= closeAffinityThreshold }.count
             return state.status(of: .chapterThree) == .completed
                 && state.cookedRecipeIDs.contains("golden-fullmoon-jam")
                 && closeCount == 4

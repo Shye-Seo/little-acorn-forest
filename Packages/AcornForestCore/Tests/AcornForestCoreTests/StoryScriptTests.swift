@@ -62,7 +62,7 @@ final class StoryScriptTests: XCTestCase {
 
     func testFourNeighboursSpeakInTheStory() {
         let speakers = Set(StoryScript.all.flatMap { $0.lines.map(\.speaker) })
-        for character in CharacterID.allCases {
+        for character in CharacterID.coreNeighbours {
             let speaker = StorySpeaker(rawValue: character.rawValue)
             XCTAssertNotNil(speaker)
             XCTAssertTrue(speakers.contains(speaker ?? .narrator), "\(character.name)의 대사가 없다")

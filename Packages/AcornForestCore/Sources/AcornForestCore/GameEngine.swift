@@ -21,8 +21,14 @@ public final class GameEngine {
     public private(set) var state: GameState
     public private(set) var gathering: GatheringSession?
     public private(set) var cooking: CookingSession?
+    public private(set) var focus: FocusSession?
     public private(set) var lastSavedAt: Date?
     public private(set) var lastMessage: String = ""
+
+    /// 테스트와 디버그에서 지금 시각을 고정할 때 바꾼다.
+    public var now: () -> Date = { Date() }
+    /// 테스트에서 달 위상을 고정할 때 바꾼다.
+    public var moonClock: MoonClock = MoonClock()
 
     private let saveStore: SaveStore
     private var pendingReply: StoryLine?
@@ -48,6 +54,9 @@ public final class GameEngine {
             || state.stats.cooks > 0
             || !state.completedChapters.isEmpty
             || state.storyPosition != nil
+            || !state.jars.isEmpty
+            || !state.purchasedPacks.isEmpty
+            || state.focusSessions > 0
     }
 
     @discardableResult
@@ -73,6 +82,7 @@ public final class GameEngine {
             pendingReply = nil
             gathering = nil
             cooking = nil
+            focus = nil
             lastMessage = "이야기를 이어 갑니다."
             return true
         } catch let error as SaveError {
@@ -89,6 +99,7 @@ public final class GameEngine {
         pendingReply = nil
         gathering = nil
         cooking = nil
+        focus = nil
         lastMessage = "할머니의 오두막 앞에 도착했어요."
         saveNow()
     }
@@ -377,22 +388,97 @@ public final class GameEngine {
         return state.unlockDiary(ids)
     }
 
+    // MARK: - 달
+
+    /// 지금 달의 위상. 디버그 고정값이 있으면 그쪽을 따른다.
+    public var currentMoonPhase: MoonPhase {
+        if let override = state.debugMoonOverride { return override }
+        return moonClock.phase(at: now())
+    }
+
+    public var daysUntilFullMoon: Double {
+        if let override = state.debugMoonOverride {
+            return override == .fullMoon ? 0 : 1
+        }
+        return MoonCalendar.daysUntilFullMoon(at: now())
+    }
+
+    /// 보름달 밤에만 열리는 비밀 정원이 지금 열려 있는지.
+    public var isMoonlitGardenOpen: Bool {
+        guard state.status(of: MoonGarden.requiredChapter) != .locked else { return false }
+        return MoonGarden.isOpen(phase: currentMoonPhase)
+    }
+
+    /// 지도·채집·부엌 위쪽에 붙는 달 배지.
+    public var moonBadgeLine: String {
+        let phase = currentMoonPhase
+        if phase.isFullMoon {
+            return "\(phase.emoji) 보름달 밤 · 비밀 정원 열림"
+        }
+        let days = max(1, Int(daysUntilFullMoon.rounded(.up)))
+        return "\(phase.emoji) \(phase.title) · 다음 보름달까지 \(days)일"
+    }
+
+    public var moonGardenLine: String {
+        MoonGarden.statusLine(phase: currentMoonPhase, daysUntilFullMoon: daysUntilFullMoon)
+    }
+
+    /// 설정 화면에서 달 위상을 고정한다. nil이면 실제 날짜를 따른다.
+    public func setMoonOverride(_ phase: MoonPhase?) {
+        state.debugMoonOverride = phase
+        lastMessage = phase.map { "달을 \($0.title)(으)로 고정했어요." } ?? "달을 실제 날짜로 되돌렸어요."
+        autoSave()
+    }
+
     // MARK: - 장소
 
     public func isLocationUnlocked(_ location: ForestLocation) -> Bool {
-        state.status(of: location.unlockChapter) != .locked
+        if let pack = location.requiredPack, !state.owns(pack) { return false }
+        if location.requiresFullMoon { return isMoonlitGardenOpen }
+        return state.status(of: location.unlockChapter) != .locked
+    }
+
+    /// 장소를 누를 수 없을 때 보여 줄 이유.
+    public func lockMessage(for location: ForestLocation) -> String {
+        if let pack = location.requiredPack, !state.owns(pack) {
+            return "\(location.title)은(는) 「\(pack.displayName)」에서 열려요."
+        }
+        if location.requiresFullMoon {
+            return MoonGarden.closedMessage(daysUntilFullMoon: daysUntilFullMoon)
+        }
+        return "\(location.title)은 아직 열리지 않았어요. 이야기를 더 진행해 주세요."
     }
 
     public var unlockedLocations: [ForestLocation] {
         ForestLocation.allCases.filter { isLocationUnlocked($0) }
     }
 
+    /// 채집 미니게임에서 실제로 만들 수 있는 재료 목록.
+    public var visibleIngredients: [Ingredient] {
+        Ingredient.allCases.filter { ingredient in
+            if state.count(of: ingredient) > 0 { return true }
+            guard let source = ingredient.sourceLocation else { return true }
+            switch source {
+            case .greenhouse:
+                return state.owns(.greenhouse)
+            case .moonlitGarden:
+                return state.status(of: MoonGarden.requiredChapter) != .locked
+            default:
+                return true
+            }
+        }
+    }
+
     // MARK: - 채집
 
     @discardableResult
     public func startGathering(at location: ForestLocation, seed: UInt64? = nil) -> Bool {
+        if let pack = location.requiredPack, !state.owns(pack) {
+            lastMessage = "\(location.title)은(는) 「\(pack.displayName)」에서 열려요."
+            return false
+        }
         guard isLocationUnlocked(location) else {
-            lastMessage = "\(location.title)은 아직 열리지 않았어요."
+            lastMessage = lockMessage(for: location)
             return false
         }
         guard location.isGatherable else {
@@ -468,34 +554,60 @@ public final class GameEngine {
         cooking?.quality ?? .good
     }
 
+    /// 지금 넣은 재료가 어떤 잼이 되는지(수첩·쪽지 기준).
+    public func recipePreview(for ingredients: [Ingredient]) -> Recipe? {
+        RecipeBook.recipe(
+            for: ingredients,
+            unlockedSecretIDs: state.secretRecipes,
+            includesSeasonal: state.owns(.greenhouse)
+        )
+    }
+
     @discardableResult
     public func finishCooking() -> CookingOutcome? {
         guard let session = cooking else { return nil }
-        let quality = session.quality
+        let baseQuality = session.quality
         let attempted = session.ingredients
-        let recipe = RecipeBook.recipe(for: attempted)
+        let recipe = recipePreview(for: attempted)
+        let blessing = MoonBlessing.forPhase(currentMoonPhase)
 
         for ingredient in attempted {
             state.remove(ingredient)
+        }
+
+        var quality = baseQuality
+        if blessing.qualityUpgrade {
+            quality = MoonBlessing.upgraded(quality)
         }
 
         var gained: [String] = []
         var isNew = false
         if let recipe {
             isNew = state.record(for: recipe.id) == nil
-            state.addCooked(recipeID: recipe.id, quality: quality)
+            state.addCooked(
+                recipeID: recipe.id,
+                quality: quality,
+                blessingTag: blessing.tag,
+                extraServings: blessing.bonusServings
+            )
             state.stats.cooks += 1
             if quality == .perfect { state.stats.perfectCooks += 1 }
             let diaryID = ForestDiary.recipeEntryID(for: recipe.id)
             if state.unlockDiary(diaryID) {
                 gained.append(diaryID)
             }
+        } else {
+            state.stats.cooks += 1
+        }
+
+        if let bonus = blessing.bonusIngredient, blessing.bonusCount > 0 {
+            state.add(bonus, count: blessing.bonusCount)
         }
 
         cooking = nil
         autoSave()
 
-        let message: String
+        var message: String
         if let recipe {
             if isNew {
                 message = "\(recipe.name)을(를) 처음 만들어 냈어요. \(quality.note)"
@@ -503,8 +615,16 @@ public final class GameEngine {
                 message = "\(recipe.name) 완성. \(quality.note)"
             }
         } else {
-            let hint = RecipeBook.closestRecipe(to: attempted).map { " ‘\($0.name)’에 가까운 조합이에요." } ?? ""
+            let hint = RecipeBook.closestRecipe(
+                to: attempted,
+                unlockedSecretIDs: state.secretRecipes,
+                includesSeasonal: state.owns(.greenhouse)
+            ).map { " ‘\($0.name)’에 가까운 조합이에요." } ?? ""
             message = "솥단지가 뭉근한 잼이 되었어요. 수첩의 레시피와 맞지 않았어요.\(hint)"
+        }
+
+        if blessing.hasEffect {
+            message += " \(blessing.phase.emoji) \(blessing.title) — \(blessing.effectLine)"
         }
 
         lastMessage = message
@@ -514,7 +634,8 @@ public final class GameEngine {
             quality: quality,
             gainedDiary: gained,
             isNewRecipe: isNew,
-            message: message
+            message: message,
+            blessing: blessing
         )
     }
 
@@ -590,15 +711,305 @@ public final class GameEngine {
         character.favoriteRecipeID == recipeID
     }
 
+    // MARK: - 잼 병 꾸미기와 선반
+
+    public var shelfJars: [CustomJamJar] { state.shelfJars }
+
+    public var canDecorate: Bool { !JarShelf.isFull(state.jars) }
+
+    /// 담가 둔 잼 한 접시로 병을 꾸며 선반에 올린다.
+    @discardableResult
+    public func decorateJar(recipeID: String,
+                            bottle: JarBottleStyle,
+                            cap: JarCapStyle,
+                            ribbon: JarRibbonColor,
+                            label: String) -> JarDecorationOutcome {
+        guard state.servings(of: recipeID) > 0 else {
+            return JarDecorationOutcome(
+                succeeded: false,
+                jar: nil,
+                message: "그 잼이 아직 없어요. 부엌에서 먼저 담가 주세요."
+            )
+        }
+        guard JarStyleCatalog.isUnlocked(bottle, ownsWorkshop: state.ownsWorkshop()) else {
+            return JarDecorationOutcome(succeeded: false, jar: nil, message: "\(bottle.title)은(는) 병 공방 스킨에서 열려요.")
+        }
+        guard JarStyleCatalog.isUnlocked(cap, ownsWorkshop: state.ownsWorkshop()) else {
+            return JarDecorationOutcome(succeeded: false, jar: nil, message: "\(cap.title)은(는) 병 공방 스킨에서 열려요.")
+        }
+        guard let slot = JarShelf.firstFreeSlot(in: state.jars) else {
+            return JarDecorationOutcome(succeeded: false, jar: nil, message: "다락 선반이 가득 찼어요. 병 하나를 내려 주세요.")
+        }
+
+        state.consumeServing(recipeID: recipeID)
+        let jar = CustomJamJar(
+            recipeID: recipeID,
+            bottle: bottle,
+            cap: cap,
+            ribbon: ribbon,
+            label: JarShelf.sanitizedLabel(label),
+            madeAt: now(),
+            moonPhase: currentMoonPhase,
+            slot: slot
+        )
+        state.placeJar(jar)
+        autoSave()
+        lastMessage = "\(jar.displayLabel) 병을 선반 \(slot + 1)번 칸에 올렸어요."
+        return JarDecorationOutcome(
+            succeeded: true,
+            jar: state.jar(id: jar.id) ?? jar,
+            message: lastMessage
+        )
+    }
+
+    @discardableResult
+    public func removeJar(id: String) -> Bool {
+        let removed = state.removeJar(id: id)
+        if removed {
+            lastMessage = "선반에서 병을 내렸어요. 잼은 다시 부엌으로 돌아가지 않아요."
+            autoSave()
+        }
+        return removed
+    }
+
+    // MARK: - 우체통
+
+    public var unclaimedLetters: [MailboxLetter] { state.unclaimedLetters }
+
+    public var mailBadgeCount: Int { state.unclaimedLetterCount }
+
+    public var sortedLetters: [MailboxLetter] { state.sortedLetters }
+
+    /// 날짜가 바뀌었으면 이웃이 남긴 편지를 받는다.
+    @discardableResult
+    public func checkMailbox(day: Int? = nil) -> [MailboxLetter] {
+        let today = day ?? state.currentDay(at: now())
+        guard today != state.lastMailCheckDay else { return [] }
+
+        let alreadyToday = Set(state.mailbox.filter { $0.day == today }.map(\.sender))
+        let candidates = MailboxSystem.letters(forDay: today, state: state, now: now())
+            .filter { !alreadyToday.contains($0.sender) }
+        state.lastMailCheckDay = today
+
+        let room = max(0, MailboxSystem.capacity - state.mailbox.count)
+        let accepted = Array(candidates.prefix(room))
+        if !accepted.isEmpty {
+            state.mailbox.append(contentsOf: accepted)
+            lastMessage = "우체통에 편지 \(accepted.count)통이 들어왔어요."
+        } else if !candidates.isEmpty {
+            lastMessage = "우체통이 가득 찼어요. 편지를 먼저 받아 주세요."
+        }
+        autoSave()
+        return accepted
+    }
+
+    /// 편지에 든 선물과 쪽지를 받는다.
+    @discardableResult
+    public func claimLetter(id: String) -> MailboxLetter? {
+        guard let index = state.mailbox.firstIndex(where: { $0.id == id }) else { return nil }
+        guard !state.mailbox[index].isClaimed else { return nil }
+
+        var parts: [String] = []
+        if let gift = state.mailbox[index].gift, gift.count > 0 {
+            state.add(gift.ingredient, count: gift.count)
+            parts.append("\(gift.ingredient.title) ×\(gift.count)")
+        }
+        if let recipeID = state.mailbox[index].secretRecipeID,
+           !state.secretRecipes.contains(recipeID) {
+            state.secretRecipes.append(recipeID)
+            state.unlockDiary(ForestDiary.recipeEntryID(for: recipeID))
+            if let recipe = SecretRecipeBook.recipe(id: recipeID) {
+                parts.append("비밀 레시피 ‘\(recipe.name)’")
+            }
+        }
+
+        state.mailbox[index].isClaimed = true
+        let letter = state.mailbox[index]
+        lastMessage = parts.isEmpty
+            ? "\(letter.sender.name)의 안부를 읽었어요."
+            : "\(letter.sender.name)의 편지에서 \(parts.joined(separator: " · "))을(를) 받았어요."
+        autoSave()
+        return letter
+    }
+
+    /// 테스트·디버그용: 날짜를 하루 넘기고 우체통을 확인한다.
+    @discardableResult
+    public func simulateNextDay() -> [MailboxLetter] {
+        state.debugDayShift += 1
+        return checkMailbox(day: state.currentDay(at: now()))
+    }
+
+    // MARK: - 집중 타이머
+
+    public var focusSession: FocusSession? { focus }
+
+    public func isTrackAvailable(_ track: AmbientTrack) -> Bool {
+        guard let pack = track.requiredPack else { return true }
+        return state.owns(pack)
+    }
+
+    @discardableResult
+    public func startFocus(_ duration: FocusDuration, track: AmbientTrack) -> Bool {
+        if let pack = track.requiredPack, !state.owns(pack) {
+            lastMessage = "\(track.title)은(는) 「\(pack.displayName)」에서 열려요."
+            return false
+        }
+        focus = FocusSession(duration: duration, track: track)
+        lastMessage = ""
+        return true
+    }
+
+    public func tickFocus(_ delta: Double) {
+        focus?.tick(delta)
+    }
+
+    public func cancelFocus() {
+        focus = nil
+    }
+
+    public var currentFocusRewardPreview: FocusReward? {
+        guard let session = focus else { return nil }
+        return FocusRules.reward(
+            for: session.duration,
+            track: session.track,
+            ownsASMRPack: state.owns(.asmrTracks),
+            isFullMoon: currentMoonPhase.isFullMoon
+        )
+    }
+
+    /// 집중을 끝까지 채웠을 때만 보상을 준다.
+    @discardableResult
+    public func finishFocus() -> FocusReward? {
+        guard let session = focus, session.isFinished else { return nil }
+        let reward = FocusRules.reward(
+            for: session.duration,
+            track: session.track,
+            ownsASMRPack: state.owns(.asmrTracks),
+            isFullMoon: currentMoonPhase.isFullMoon
+        )
+        state.fireflyDust += reward.fireflyDust
+        state.add(reward.ingredients)
+        state.focusSessions += 1
+        state.focusMinutes += session.duration.rawValue
+        focus = nil
+        lastMessage = reward.message
+        autoSave()
+        return reward
+    }
+
+    // MARK: - 확장팩
+
+    public func owns(_ pack: ContentPack) -> Bool {
+        state.owns(pack)
+    }
+
+    /// 결제가 확인된 팩을 게임에 반영한다. 처음 산 팩이면 true.
+    @discardableResult
+    public func grantPack(_ pack: ContentPack) -> Bool {
+        let newly = state.grant(pack)
+        if newly {
+            lastMessage = "「\(pack.displayName)」이(가) 열렸어요."
+            autoSave()
+        }
+        return newly
+    }
+
+    public func revokePack(_ pack: ContentPack) {
+        state.revoke(pack)
+        lastMessage = "「\(pack.displayName)」을(를) 닫았어요."
+        autoSave()
+    }
+
+    public func setCabinStyle(_ style: CabinStyle) {
+        let unlocked = CabinStyle.isUnlocked(style, ownsWorkshop: state.ownsWorkshop())
+        guard unlocked else {
+            lastMessage = "\(style.title)은(는) 병 공방 스킨에서 열려요."
+            return
+        }
+        state.cabinStyle = style
+        autoSave()
+    }
+
+    // MARK: - 온실 대화
+
+    public var greenhouseNeighbours: [CharacterID] {
+        state.owns(.greenhouse) ? CharacterID.expansionNeighbours : []
+    }
+
+    /// 지금 화면에 보여 줄 이웃(확장 이웃은 온실을 가진 뒤에만).
+    public var visibleCharacters: [CharacterID] {
+        state.visibleCharacters
+    }
+
+    /// 온실에 처음 들어갔을 때의 한 장면.
+    public func greenhouseWelcome() -> DialogueOutcome? {
+        guard state.owns(.greenhouse) else {
+            lastMessage = "온실은 「사계절 온실 확장팩」에서 열려요."
+            return nil
+        }
+        let isFirst = !state.hasFlag("greenhouse.opened")
+        var gain = 0
+        if isFirst {
+            state.setFlag("greenhouse.opened")
+            gain = GreenhouseDialogue.affinityGain - 2
+            state.addAffinity(gain, to: .luna)
+            state.addAffinity(gain, to: .coco)
+            _ = refreshDiaryMemories()
+            autoSave()
+        }
+        return DialogueOutcome(
+            scene: GreenhouseDialogue.intro,
+            gain: gain,
+            isFirstTime: isFirst,
+            message: isFirst ? "온실 문이 열렸어요." : "다시 유리 지붕 아래로."
+        )
+    }
+
+    /// 온실지기와의 대화. 처음 끝까지 읽으면 호감도가 오른다.
+    @discardableResult
+    public func talk(to character: CharacterID) -> DialogueOutcome? {
+        guard character.isExpansionCharacter else { return nil }
+        guard state.owns(.greenhouse) else {
+            lastMessage = "\(character.name)을(를) 만나려면 「사계절 온실 확장팩」이 필요해요."
+            return nil
+        }
+        let isFirst = !state.hasTalked(to: character)
+        guard let scene = isFirst
+            ? GreenhouseDialogue.firstScene(for: character)
+            : GreenhouseDialogue.closeScene(for: character) else {
+            return nil
+        }
+
+        var gain = 0
+        if isFirst {
+            gain = GreenhouseDialogue.affinityGain
+            state.addAffinity(gain, to: character)
+            state.markTalked(to: character)
+            _ = refreshDiaryMemories()
+            autoSave()
+        }
+
+        return DialogueOutcome(
+            scene: scene,
+            gain: gain,
+            isFirstTime: isFirst,
+            message: gain > 0 ? "\(character.name)과(와) 이야기를 나눴어요. 호감도 +\(gain)" : scene.closingThought
+        )
+    }
+
     // MARK: - 일기장
 
     public var diaryEntries: [DiaryEntry] { ForestDiary.entries }
+
+    public var expandedDiaryEntries: [DiaryEntry] { ForestDiary.expandedEntries }
 
     public func isDiaryUnlocked(_ entry: DiaryEntry) -> Bool {
         state.hasDiary(entry.id)
     }
 
     public var diaryProgress: DiaryProgress { state.diaryProgress }
+
+    public var expandedDiaryProgress: DiaryProgress { state.expandedDiaryProgress }
 
     public func diaryEntries(kind: DiaryKind) -> [DiaryEntry] {
         ForestDiary.entries(kind: kind)
@@ -609,7 +1020,7 @@ public final class GameEngine {
     public var progressLine: String {
         let completed = state.completedChapters.count
         let total = StoryChapter.allCases.count
-        let diary = state.diary.count
+        let diary = state.diaryProgress.unlocked
         return "이야기 \(completed)/\(total) · 일기 \(diary)/\(ForestDiary.totalCount) · 바구니 \(state.totalIngredients)개"
     }
 

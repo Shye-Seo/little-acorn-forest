@@ -8,6 +8,8 @@ public enum StorySpeaker: String, Codable, Sendable {
     case songi
     case mong
     case rubi
+    case luna
+    case coco
 
     public var displayName: String {
         switch self {
@@ -17,6 +19,8 @@ public enum StorySpeaker: String, Codable, Sendable {
         case .songi: return "송이"
         case .mong: return "몽"
         case .rubi: return "루비"
+        case .luna: return "루나"
+        case .coco: return "코코"
         }
     }
 
@@ -27,6 +31,8 @@ public enum StorySpeaker: String, Codable, Sendable {
         case .songi: return .songi
         case .mong: return .mong
         case .rubi: return .rubi
+        case .luna: return .luna
+        case .coco: return .coco
         }
     }
 

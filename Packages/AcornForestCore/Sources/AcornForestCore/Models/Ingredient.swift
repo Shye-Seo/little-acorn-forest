@@ -1,12 +1,17 @@
 import Foundation
 
-/// 달빛 숲에서 주워 담는 판타지 재료 네 가지.
-/// 잼 조합의 최소 단위이고, 채집 미니게임이 떨어뜨리는 물건이기도 하다.
+/// 달빛 숲에서 주워 담는 재료.
+/// 앞의 네 가지는 프롤로그부터 손에 잡히는 기본 재료이고,
+/// 뒤의 네 가지는 보름달 정원과 사계절 온실에서만 나오는 확장 재료다.
 public enum Ingredient: String, CaseIterable, Codable, Identifiable, Sendable {
     case dewberry
     case fireflyNectar
     case starMossShroom
     case moonflakeSpice
+    case moonlitDew
+    case cherryHoney
+    case mapleSap
+    case snowBlossom
 
     public var id: String { rawValue }
 
@@ -16,6 +21,10 @@ public enum Ingredient: String, CaseIterable, Codable, Identifiable, Sendable {
         case .fireflyNectar: return "반딧불 꽃꿀"
         case .starMossShroom: return "별이끼 버섯"
         case .moonflakeSpice: return "달조각 향신료"
+        case .moonlitDew: return "월광 이슬"
+        case .cherryHoney: return "봄 벚꽃꿀"
+        case .mapleSap: return "가을 단풍 수액"
+        case .snowBlossom: return "겨울 눈꽃"
         }
     }
 
@@ -26,6 +35,10 @@ public enum Ingredient: String, CaseIterable, Codable, Identifiable, Sendable {
         case .fireflyNectar: return "Firefly Nectar"
         case .starMossShroom: return "Star-moss Shroom"
         case .moonflakeSpice: return "Moonflake Spice"
+        case .moonlitDew: return "Moonlit Dew"
+        case .cherryHoney: return "Cherry Blossom Honey"
+        case .mapleSap: return "Maple Sap"
+        case .snowBlossom: return "Snow Blossom"
         }
     }
 
@@ -35,6 +48,10 @@ public enum Ingredient: String, CaseIterable, Codable, Identifiable, Sendable {
         case .fireflyNectar: return "🍯"
         case .starMossShroom: return "🍄"
         case .moonflakeSpice: return "🌙"
+        case .moonlitDew: return "💧"
+        case .cherryHoney: return "🌸"
+        case .mapleSap: return "🍁"
+        case .snowBlossom: return "❄️"
         }
     }
 
@@ -49,6 +66,14 @@ public enum Ingredient: String, CaseIterable, Codable, Identifiable, Sendable {
             return "별가루를 머금은 이끼 아래에서 자란다. 손끝에서 별이 톡톡 터진다."
         case .moonflakeSpice:
             return "보름달이 뜨는 밤에만 나무껍질에 맺히는 은빛 가루. 달바람이 불 때 걷어야 한다."
+        case .moonlitDew:
+            return "달이 꽉 찬 밤에만 비밀 정원의 잎맥을 따라 흐르는 물방울. 손에 닿으면 달빛이 된다."
+        case .cherryHoney:
+            return "온실의 벚나무가 봄에만 흘리는 꿀. 따뜻한 유리 아래에서 열두 달 봄을 견딘다."
+        case .mapleSap:
+            return "온실 북쪽 벽의 단풍나무에서 밤새 떨어지는 수액. 식으면 조용히 굳는다."
+        case .snowBlossom:
+            return "온실 천장에 내려앉은 눈이 꽃잎 모양으로 맺힌 것. 만지면 손끝이 시리다."
         }
     }
 
@@ -59,6 +84,10 @@ public enum Ingredient: String, CaseIterable, Codable, Identifiable, Sendable {
         case .starMossShroom: return 12
         case .fireflyNectar: return 15
         case .moonflakeSpice: return 20
+        case .moonlitDew: return 30
+        case .cherryHoney: return 18
+        case .mapleSap: return 16
+        case .snowBlossom: return 22
         }
     }
 
@@ -69,7 +98,42 @@ public enum Ingredient: String, CaseIterable, Codable, Identifiable, Sendable {
         case .fireflyNectar: return "nectar"
         case .starMossShroom: return "starmoss"
         case .moonflakeSpice: return "moonflake"
+        case .moonlitDew: return "moonlit"
+        case .cherryHoney: return "cherry"
+        case .mapleSap: return "maple"
+        case .snowBlossom: return "snow"
         }
+    }
+
+    /// 프롤로그~에필로그만 플레이해도 만날 수 없는 재료인지.
+    /// 확장 재료는 보름달 정원(무료) 또는 사계절 온실(유료)에서만 나온다.
+    public var isExpansionIngredient: Bool {
+        switch self {
+        case .dewberry, .fireflyNectar, .starMossShroom, .moonflakeSpice:
+            return false
+        case .moonlitDew, .cherryHoney, .mapleSap, .snowBlossom:
+            return true
+        }
+    }
+
+    /// 확장 재료가 들어오는 장소.
+    public var sourceLocation: ForestLocation? {
+        switch self {
+        case .dewberry, .fireflyNectar, .starMossShroom, .moonflakeSpice:
+            return nil
+        case .moonlitDew:
+            return .moonlitGarden
+        case .cherryHoney, .mapleSap, .snowBlossom:
+            return .greenhouse
+        }
+    }
+
+    public static var basic: [Ingredient] {
+        allCases.filter { !$0.isExpansionIngredient }
+    }
+
+    public static var expansion: [Ingredient] {
+        allCases.filter { $0.isExpansionIngredient }
     }
 }
 

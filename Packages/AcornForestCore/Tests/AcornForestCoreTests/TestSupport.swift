@@ -3,8 +3,16 @@ import XCTest
 import AcornForestCore
 
 enum TestSupport {
-    static func engine(state: GameState? = nil) -> GameEngine {
-        GameEngine(saveStore: InMemorySaveStore(), state: state)
+    /// 테스트는 달 위상을 그믐달로 고정한다. 위상 효과가 섞이지 않게 하기 위해서다.
+    static let defaultMoon: MoonPhase = .waning
+    /// 달 위상 테스트에 쓰는 고정 시각(2026-11-24 15:00 UTC).
+    static let fixedDate = Date(timeIntervalSince1970: 1_795_388_400)
+
+    static func engine(state: GameState? = nil, moon: MoonPhase = TestSupport.defaultMoon) -> GameEngine {
+        let engine = GameEngine(saveStore: InMemorySaveStore(), state: state)
+        engine.moonClock = MoonClock(overridePhase: moon)
+        engine.now = { TestSupport.fixedDate }
+        return engine
     }
 
     static func stateWithPrologueDone() -> GameState {
