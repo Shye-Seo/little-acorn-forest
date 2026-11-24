@@ -176,7 +176,7 @@ SWIFT_BUILTINS = set(
     Capsule Circle Rectangle RoundedRectangle Ellipse LinearGradient RadialGradient AngularGradient
     ClosedRange Range Content Foundation SwiftUI UIKit JSONEncoder JSONDecoder DateEncodingStrategy ForEach
     UserDefaults Weight AcornForestCore LittleAcornForest
-    AVFoundation AudioToolbox StoreKit AVFAudio AVAudioEngine AVAudioPlayerNode AVAudioPCMBuffer AVAudioFormat
+    AVFoundation AudioToolbox StoreKit Combine AVFAudio AVAudioEngine AVAudioPlayerNode AVAudioPCMBuffer AVAudioFormat
     AVAudioSession AVAudioTime AVNode AudioBufferList OSStatus AVAudioFrameCount AVAudioFramePosition
     Product Transaction VerificationResult AppStore ProductPurchaseResult PurchaseResult ProductID
     Published EnvironmentObject StateObject ObservedObject ObservableObject
@@ -253,7 +253,7 @@ app_bad_imports = [
     if p in app_files
     for m in mods
     if m not in {"SwiftUI", "UIKit", "Foundation", "AcornForestCore",
-                 "AVFoundation", "AudioToolbox", "StoreKit"}
+                 "AVFoundation", "AudioToolbox", "StoreKit", "Combine"}
 ]
 check("앱 타깃 import 허용 범위", not app_bad_imports, ", ".join(app_bad_imports))
 
