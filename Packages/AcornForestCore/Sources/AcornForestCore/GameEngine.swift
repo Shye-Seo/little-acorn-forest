@@ -596,8 +596,6 @@ public final class GameEngine {
             if state.unlockDiary(diaryID) {
                 gained.append(diaryID)
             }
-        } else {
-            state.stats.cooks += 1
         }
 
         if let bonus = blessing.bonusIngredient, blessing.bonusCount > 0 {
