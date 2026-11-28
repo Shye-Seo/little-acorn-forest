@@ -75,30 +75,30 @@ final class AffinityAndDiaryTests: XCTestCase {
         XCTAssertTrue(ForestDiary.memoryEntriesUnlocked(for: .mong, level: .shy).isEmpty)
         XCTAssertEqual(ForestDiary.memoryEntriesUnlocked(for: .mong, level: .greeting).count, 1)
         XCTAssertEqual(ForestDiary.memoryEntriesUnlocked(for: .mong, level: .close).count, 2)
-        XCTAssertEqual(ForestDiary.memoryEntriesUnlocked(for: .mong, level: .family).count, 2)
+        XCTAssertEqual(ForestDiary.memoryEntriesUnlocked(for: .mong, level: .family).count, 3)
     }
 
     func testDiaryCatalogIsComplete() {
         XCTAssertEqual(ForestDiary.entries(kind: .recipe).count, RecipeBook.base.count)
-        XCTAssertEqual(ForestDiary.entries(kind: .memory).count, CharacterID.coreNeighbours.count * 2)
+        XCTAssertEqual(ForestDiary.entries(kind: .memory).count, CharacterID.coreNeighbours.count * 3)
         XCTAssertEqual(ForestDiary.entries(kind: .chapter).count, StoryChapter.allCases.count)
         XCTAssertEqual(ForestDiary.entries(kind: .festival).count, 1)
         let ids = ForestDiary.entries.map(\.id)
         XCTAssertEqual(Set(ids).count, ids.count)
-        XCTAssertEqual(ForestDiary.totalCount, 21)
+        XCTAssertEqual(ForestDiary.totalCount, 26)
     }
 
     func testExpandedDiaryCoversGreenhouseAndSecretRecipes() {
         let extras = ForestDiary.expandedEntries
         XCTAssertEqual(extras.filter { $0.kind == .recipe }.count,
-                       GreenhouseRecipes.all.count + SecretRecipeBook.all.count)
+                       GreenhouseRecipes.all.count + MidnightRecipes.all.count + SecretRecipeBook.all.count)
         XCTAssertEqual(extras.filter { $0.kind == .memory }.count,
-                       CharacterID.expansionNeighbours.count * 2)
+                       (CharacterID.expansionNeighbours.count + CharacterID.visitorNeighbours.count) * 3)
         let ids = ForestDiary.allEntries.map(\.id)
         XCTAssertEqual(Set(ids).count, ids.count, "본편과 확장 기록의 id가 겹치면 안 된다")
         XCTAssertEqual(ForestDiary.expandedCount,
-                       GreenhouseRecipes.all.count + SecretRecipeBook.all.count
-                       + CharacterID.expansionNeighbours.count * 2)
+                       GreenhouseRecipes.all.count + MidnightRecipes.all.count + SecretRecipeBook.all.count
+                       + (CharacterID.expansionNeighbours.count + CharacterID.visitorNeighbours.count) * 3)
     }
 
     func testGiftConsumesServingAndRaisesAffinity() {

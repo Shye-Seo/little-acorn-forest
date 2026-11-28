@@ -22,13 +22,13 @@ final class GreenhouseTests: XCTestCase {
     }
 
     func testThreeSeasonalRecipesExist() {
-        XCTAssertEqual(GreenhouseRecipes.all.count, 3)
+        XCTAssertEqual(GreenhouseRecipes.all.count, 5)
         for recipe in GreenhouseRecipes.all {
             XCTAssertEqual(recipe.lockedByPack, .greenhouse)
             XCTAssertTrue((2...3).contains(recipe.ingredients.count))
             XCTAssertFalse(recipe.story.isEmpty)
         }
-        XCTAssertEqual(RecipeBook.all.count, 12, "기본 7 + 계절 3 + 비밀 2")
+        XCTAssertEqual(RecipeBook.all.count, 26, "기본 8 + 계절 5 + 심야 9 + 비밀 4")
         let keys = RecipeBook.all.map(\.key)
         XCTAssertEqual(Set(keys).count, keys.count, "조합이 겹치면 안 된다")
     }
@@ -55,8 +55,8 @@ final class GreenhouseTests: XCTestCase {
         let plain = TestSupport.stockedState([])
         let withPack = greenhouseState()
         XCTAssertLessThan(RecipeBook.unCooked(in: plain).count, RecipeBook.unCooked(in: withPack).count)
-        XCTAssertEqual(RecipeBook.visibleRecipes(for: plain).count, 7)
-        XCTAssertEqual(RecipeBook.visibleRecipes(for: withPack).count, 10)
+        XCTAssertEqual(RecipeBook.visibleRecipes(for: plain).count, 8)
+        XCTAssertEqual(RecipeBook.visibleRecipes(for: withPack).count, 22, "본편 8 + 온실 5 + 심야 9")
     }
 
     func testNewNeighboursAreFullyDefined() {
@@ -145,6 +145,6 @@ final class GreenhouseTests: XCTestCase {
         XCTAssertEqual(GreenhouseRecipes.Season.winter.ingredient, .snowBlossom)
         XCTAssertTrue(ForestDiary.expandedEntries.contains { $0.id == "memory.luna.1" })
         XCTAssertTrue(ForestDiary.expandedEntries.contains { $0.id == "recipe.\(GreenhouseRecipes.winterID)" })
-        XCTAssertEqual(ForestDiary.totalCount, 21, "본편 일기장은 그대로 21칸")
+        XCTAssertEqual(ForestDiary.totalCount, 26, "본편 일기장 26칸")
     }
 }

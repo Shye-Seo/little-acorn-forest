@@ -467,11 +467,14 @@ check("본편 이웃 4명", len(characters) == 4, str(characters))
 CharacterID_CORE = ["tori", "songi", "mong", "rubi"]
 CharacterID_EXPANSION = [c for c in character_cases if c in {"luna", "coco"}]
 check("온실 이웃 2명(루나·코코)", CharacterID_EXPANSION == ["luna", "coco"], str(character_cases))
-all_characters = characters + CharacterID_EXPANSION
+CharacterID_VISITOR = [c for c in character_cases if c in {"dallae", "moru"}]
+check("심야 방문 손님 2명(달래·모루)", CharacterID_VISITOR == ["dallae", "moru"], str(character_cases))
+all_characters = characters + CharacterID_EXPANSION + CharacterID_VISITOR
 
 # 레시피 (본편 + 사계절 온실 + 비밀 쪽지)
 greenhouse_text = read(CORE_DIR / "Greenhouse/GreenhouseRecipes.swift")
 secret_text = read(CORE_DIR / "Mailbox/SecretRecipeBook.swift")
+midnight_text = read(CORE_DIR / "Midnight/MidnightRecipes.swift")
 
 
 def parse_recipes(text: str):
@@ -488,16 +491,22 @@ def parse_recipes(text: str):
 base_blocks, base_recipes = parse_recipes(recipe_text)
 green_blocks, green_recipes = parse_recipes(greenhouse_text)
 secret_blocks, secret_recipes = parse_recipes(secret_text)
-recipe_blocks = base_blocks + green_blocks + secret_blocks
-recipes = {**base_recipes, **green_recipes, **secret_recipes}
+midnight_blocks, midnight_recipes = parse_recipes(midnight_text)
+recipe_blocks = base_blocks + green_blocks + secret_blocks + midnight_blocks
+recipes = {**base_recipes, **green_recipes, **secret_recipes, **midnight_recipes}
 INGREDIENTS = {"dewberry", "fireflyNectar", "starMossShroom", "moonflakeSpice",
-               "moonlitDew", "cherryHoney", "mapleSap", "snowBlossom"}
+               "moonlitDew", "cherryHoney", "mapleSap", "snowBlossom",
+               "nightBellFlower", "mothDustSugar", "starSaltCrystal", "cometFeather",
+               "emberQuince", "frostFernSpore"}
+MIDNIGHT_INGREDIENTS = {"nightBellFlower", "mothDustSugar", "starSaltCrystal", "cometFeather"}
 SIGNATURE_JAM = "golden-fullmoon-jam"
 
-check("본편 레시피 7종", len(base_recipes) == 7, f"{len(base_recipes)}종")
-check("온실 레시피 3종", len(green_recipes) == 3, f"{len(green_recipes)}종")
-check("비밀 레시피 2종", len(secret_recipes) == 2, f"{len(secret_recipes)}종")
-check("전체 레시피 12종", len(recipes) == 12, f"{len(recipes)}종")
+check("본편 레시피 8종", len(base_recipes) == 8, f"{len(base_recipes)}종")
+check("온실 레시피 5종", len(green_recipes) == 5, f"{len(green_recipes)}종")
+check("비밀 레시피 4종", len(secret_recipes) == 4, f"{len(secret_recipes)}종")
+check("심야 구역 레시피 9종", len(midnight_recipes) == 9, f"{len(midnight_recipes)}종")
+check("전체 레시피 26종", len(recipes) == 26, f"{len(recipes)}종")
+check("마법 잼이 14종 이상", len(recipes) >= 14, f"{len(recipes)}종")
 check("레시피 id 중복 없음", len(recipe_blocks) == len(recipes))
 check("모든 레시피 2~3가지 재료", all(2 <= len(v[1]) <= 3 for v in recipes.values()),
       str({k: v[1] for k, v in recipes.items()}))
@@ -508,7 +517,7 @@ check("모든 레시피 재료가 실제 재료", all(
       str({k: v[1] for k, v in recipes.items() if not set(v[1]) <= INGREDIENTS}))
 check("축제 시그니처 잼 존재", SIGNATURE_JAM in recipes)
 
-min_chapters = re.findall(r"minChapter: \.(\w+)", recipe_text + greenhouse_text + secret_text)
+min_chapters = re.findall(r"minChapter: \.(\w+)", recipe_text + greenhouse_text + secret_text + midnight_text)
 check("레시피 등장 장이 유효", bool(min_chapters) and set(min_chapters) <= set(chapters), str(set(min_chapters)))
 
 # 이웃의 최애/호불호 레시피가 실제 레시피를 가리키는지
@@ -525,7 +534,7 @@ disliked_map = {c: re.findall(r'"([^"]+)"', v) for c, v in
                 re.findall(r"case \.(\w+): return \[([^\]]*)\]", switch_block(r"var dislikedRecipeIDs: \[String\]"))}
 wish_block = switch_block(r"var wish: String")
 
-check("이웃 6명 최애 요리 지정", set(favorite_map) == set(all_characters), str(favorite_map))
+check("이웃 8명 최애 요리 지정", set(favorite_map) == set(all_characters), str(favorite_map))
 check("최애 요리가 실제 레시피", all(v in recipes for v in favorite_map.values()), str(favorite_map))
 check("최애 요리가 겹치지 않음", len(set(favorite_map.values())) == len(favorite_map), str(favorite_map))
 check("좋아하는/싫어하는 요리가 실제 레시피",
@@ -595,7 +604,7 @@ scene_diary_refs = re.findall(r"unlocksDiary: \[([^\]]*)\]", story_text, flags=r
 referenced_diary = [d for block in scene_diary_refs for d in re.findall(r"\"([^\"]+)\"", block)]
 known_diary = (
     {f"recipe.{rid}" for rid in recipes}
-    | {f"memory.{c}.{tier}" for c in characters for tier in (1, 2)}
+    | {f"memory.{c}.{tier}" for c in all_characters for tier in (1, 2, 3)}
     | {f"chapter.{c}" for c in chapters}
     | {"festival.starlight"}
 )
@@ -605,7 +614,8 @@ check("대본의 일기장 참조가 실제 항목", not bad_diary_refs, str(bad
 diary_builders = ["recipeEntryID", "memoryEntryID", "chapterEntryID", "festivalEntryID",
                   "for recipe in RecipeBook.base", "for character in CharacterID.coreNeighbours",
                   "for chapter in StoryChapter.ordered",
-                  "GreenhouseRecipes.all", "SecretRecipeBook.all", "expandedEntries"]
+                  "GreenhouseRecipes.all", "MidnightRecipes.all", "SecretRecipeBook.all",
+                  "CharacterID.visitorNeighbours", "expandedEntries"]
 check("일기장 생성 규칙 확인", all(token in diary_text for token in diary_builders),
       str([t for t in diary_builders if t not in diary_text]))
 
@@ -721,9 +731,9 @@ check("연속 배율 상한 2배", abs((1 + streak_cap * streak_step) - 2.0) < 1
 check("반짝 재료 확률 0~0.1", 0 < golden_chance <= 0.1, str(golden_chance))
 
 points_per = {ing: int(v) for ing, v in re.findall(r"case \.(\w+): return (\d+)", read(CORE_DIR / "Models/Ingredient.swift"))}
-check("재료별 채집 점수 8종", set(points_per) == INGREDIENTS, str(points_per))
+check("재료별 채집 점수 14종", set(points_per) == INGREDIENTS, str(points_per))
 check("확장 재료가 기본 재료보다 귀함",
-      min(points_per[i] for i in ["moonlitDew", "cherryHoney", "mapleSap", "snowBlossom"]) > 15,
+      min(points_per[i] for i in INGREDIENTS - {"dewberry", "fireflyNectar", "starMossShroom", "moonflakeSpice"}) > 15,
       str(points_per))
 
 
@@ -794,10 +804,13 @@ check("황금 보름달 잼+단짝4명이면 에필로그 열림", chapter_unloc
 check("시그니처 잼 없으면 에필로그 잠김", not chapter_unlock("epilogue", dict(stage3, cookedIDs=set())))
 
 # 일기장 기대 수량
-expected_diary = len(base_recipes) + len(CharacterID_CORE) * 2 + len(chapters) + 1
-check("일기장 칸 수 계산(본편 21칸)", expected_diary == 21, str(expected_diary))
-expected_expanded = len(green_recipes) + len(secret_recipes) + len(CharacterID_EXPANSION) * 2
-check("확장 일기장 칸 수 계산", expected_expanded == 9, str(expected_expanded))
+expected_diary = len(base_recipes) + len(CharacterID_CORE) * 3 + len(chapters) + 1
+check("일기장 칸 수 계산(본편 26칸)", expected_diary == 26, str(expected_diary))
+expected_expanded = (len(green_recipes) + len(midnight_recipes) + len(secret_recipes)
+                     + (len(CharacterID_EXPANSION) + len(CharacterID_VISITOR)) * 3)
+check("확장 일기장 칸 수 계산(30칸)", expected_expanded == 30, str(expected_expanded))
+check("도감 볼륨(재료+레시피)이 40칸", len(INGREDIENTS) + len(recipes) == 40,
+      f"{len(INGREDIENTS)}+{len(recipes)}")
 check("일기장 코드가 같은 구조", "memoryEntriesUnlocked" in diary_text and "memoryTierUnlocked" in diary_text)
 
 
@@ -931,13 +944,23 @@ check("달빛 정원 재료 = 월광 이슬", "moonlitDew" in garden_text)
 
 locations = re.findall(r"^    case (\w+)$", location_text, flags=re.M)
 locations = [loc for loc in locations if loc in {
-    "cabinKitchen", "berryPatch", "fireflyPond", "owlLibrary", "festivalGlade", "moonlitGarden", "greenhouse"}]
-check("숲 장소 7곳(기존 5 + 비밀 정원 + 온실)", len(locations) == 7, str(locations))
+    "cabinKitchen", "berryPatch", "fireflyPond", "owlLibrary", "festivalGlade", "moonlitGarden",
+    "greenhouse", "mothLanternBridge", "starSaltSpring"}]
+check("숲 장소 9곳(기존 7 + 심야 구역 2)", len(locations) == 9, str(locations))
 garden_pool = grab(r"case \.moonlitGarden:\s*return \[(.*?)\]", location_text, "gardenPool")
 green_pool = grab(r"case \.greenhouse:\s*return \[(.*?)\]", location_text, "greenhousePool")
 check("비밀 정원에는 월광 이슬", ".moonlitDew" in garden_pool, garden_pool)
-check("온실에는 계절 재료 3종", all(token in green_pool for token in
-                                [".cherryHoney", ".mapleSap", ".snowBlossom"]), green_pool)
+check("온실에는 계절 재료 5종", all(token in green_pool for token in
+                                [".cherryHoney", ".mapleSap", ".snowBlossom", ".emberQuince", ".frostFernSpore"]),
+      green_pool)
+bridge_pool = grab(r"case \.mothLanternBridge:\s*return \[(.*?)\]", location_text, "bridgePool")
+spring_pool = grab(r"case \.starSaltSpring:\s*return \[(.*?)\]", location_text, "springPool")
+check("달나방 등불다리에 밤종꽃·달나방 가루", ".nightBellFlower" in bridge_pool and ".mothDustSugar" in bridge_pool,
+      bridge_pool)
+check("별소금 샘에 별소금 결정·혜성 깃털", ".starSaltCrystal" in spring_pool and ".cometFeather" in spring_pool,
+      spring_pool)
+check("심야 구역은 이야기를 마친 뒤에만 열린다", "requiresStoryComplete" in location_text
+      and ".mothLanternBridge, .starSaltSpring: return true" in location_text)
 check("온실 장소는 확장팩 필요", ".greenhouse: return .greenhouse" in location_text)
 
 shelf_capacity = int(grab(r"public static let capacity = (\d+)", shelf_text, "shelfCapacity") or 0)
@@ -1079,9 +1102,10 @@ for tier in ("common", "refined", "rare"):
     block = grab(rf"case ([^:]*?):\s*\n\s*return \.{tier}\n", ingredient_text, f"tier.{tier}")
     for name in re.findall(r"\.(\w+)", block):
         tier_map[name] = tier
-check("재료 8종 등급 지정", set(tier_map) == INGREDIENTS, str(tier_map))
-check("희귀 재료는 월광 이슬·겨울 눈꽃",
-      {k for k, v in tier_map.items() if v == "rare"} == {"moonlitDew", "snowBlossom"}, str(tier_map))
+check("재료 14종 등급 지정", set(tier_map) == INGREDIENTS, str(tier_map))
+check("희귀 재료는 월광 이슬·겨울 눈꽃·혜성 깃털·서리 고사리솜",
+      {k for k, v in tier_map.items() if v == "rare"} == {"moonlitDew", "snowBlossom", "cometFeather", "frostFernSpore"},
+      str(tier_map))
 
 common_share = float(grab(r"public static let commonShare = ([\d.]+)", balance_text, "commonShare"))
 refined_share = float(grab(r"public static let refinedShare = ([\d.]+)", balance_text, "refinedShare"))
@@ -1103,7 +1127,7 @@ for location, body in DROP_CASE.findall(location_text):
     if entries:
         drop_tables[location] = [(name, int(weight)) for name, weight in entries]
 
-check("드랍표 7곳 파싱", set(drop_tables) == set(locations), str(sorted(drop_tables)))
+check("드랍표 9곳 파싱", set(drop_tables) == set(locations), str(sorted(drop_tables)))
 for location, table in drop_tables.items():
     total = sum(weight for _, weight in table)
     check(f"드랍표 합 100: {location}", total == 100, f"{total}")
@@ -1225,6 +1249,82 @@ check("부엌에 마무리 단계 연결", "SimmerPhaseView" in read(APP_DIR / "
 check("선반에 주문 장식 표시", "orderTrophies" in read(APP_DIR / "Views/ShelfView.swift"))
 check("선물 시트에 하루 선물 수 안내", "giftHint" in read(APP_DIR / "Views/NeighboursView.swift"))
 check("채집 화면에 기운 표시", "moonlightEnergy" in read(APP_DIR / "Views/GatheringGameView.swift"))
+
+
+# ---------------------------------------------------------------------------
+# 9) 2026-11 볼륨 확장 · 심사 필수 파일
+# ---------------------------------------------------------------------------
+
+for name, path in [
+    ("심야 레시피", CORE_DIR / "Midnight/MidnightRecipes.swift"),
+    ("심야 손님 대화", CORE_DIR / "Story/MidnightGuests.swift"),
+    ("호감도 구간 대사", CORE_DIR / "Story/AffinityDialogue.swift"),
+    ("특별 의뢰", CORE_DIR / "Requests/SpecialRequestBook.swift"),
+    ("도감 마스터리", CORE_DIR / "Progress/CodexMastery.swift"),
+]:
+    check(f"Core 파일 존재: {name}", path.exists(), str(path.relative_to(ROOT)))
+
+check("확장 콘텐츠 테스트 파일", any(p.stem == "ExpansionVolumeTests" for p in core_test_files),
+      str([p.name for p in core_test_files]))
+check("단위 테스트 210개 이상", len(test_functions) >= 210, f"{len(test_functions)}개")
+
+# 심야 레시피는 이야기를 마친 뒤에만 보인다.
+recipe_source = read(CORE_DIR / "Models/Recipe.swift")
+check("레시피 목록에 심야 레시피 포함", "MidnightRecipes.all" in recipe_source)
+check("심야 레시피는 이야기 완료 뒤에만 노출",
+      "includesMidnight" in recipe_source and "state.isStoryComplete" in recipe_source)
+check("심야 재료만 따로 셀 수 있다", "isMidnightIngredient" in ingredient_text and
+      "Ingredient.midnight" in ingredient_text or "public static var midnight" in ingredient_text)
+
+# 특별 의뢰·도감 마스터리가 저장되는지
+check("특별 의뢰가 GameState에 저장된다",
+      "completedRequests" in gamestate_text and "claimCodexTier" in gamestate_text)
+check("엔진이 특별 의뢰를 처리한다",
+      "deliverRequest" in engine_text and "availableRequests" in engine_text)
+check("엔진이 도감 마스터리 보상을 준다", "claimCodexMasteryTiers" in engine_text)
+check("요리를 마치면 도감 마스터리를 확인한다",
+      "claimCodexMasteryTiers()" in engine_text.split("public func finishCooking")[-1])
+
+# 화면 배선
+neighbours_source = read(APP_DIR / "Views/NeighboursView.swift")
+check("이웃 화면에 호감도 구간 대사", "affinityLine(for:" in neighbours_source)
+check("이웃 화면에 특별 의뢰 카드", "requestRow" in neighbours_source and "deliverRequest" in neighbours_source)
+check("이웃 화면에 심야 손님 안내", "midnightGuestCard" in neighbours_source)
+check("이웃 화면이 역할 이름표를 쓴다", "roleLabel" in neighbours_source)
+check("일기장에 도감 마스터리 줄", "codexLine" in read(APP_DIR / "Views/DiaryView.swift"))
+map_source = read(APP_DIR / "Views/ForestMapView.swift")
+check("지도에 심야 구역 표시", "mothLanternBridge" in map_source and "starSaltSpring" in map_source)
+theme_source = read(APP_DIR / "Theme/ForestTheme.swift")
+check("새 재료·손님 색 지정", "mothDustSugar" in theme_source and "dallae" in theme_source)
+store_source = read(APP_DIR / "GameStore.swift")
+check("앱 스토어에 의뢰·마스터리 연결",
+      "deliverRequest" in store_source and "codexLine" in store_source and "openMidnightWelcome" in store_source)
+
+# App Store 심사 필수 파일
+privacy_path = APP_DIR / "PrivacyInfo.xcprivacy"
+check("PrivacyInfo.xcprivacy 존재", privacy_path.exists(), str(privacy_path.relative_to(ROOT)))
+if privacy_path.exists():
+    import plistlib
+    try:
+        manifest = plistlib.loads(privacy_path.read_bytes())
+        check("PrivacyInfo plist 파싱", isinstance(manifest, dict))
+    except Exception as exc:  # noqa: BLE001
+        manifest = {}
+        fail("PrivacyInfo plist 파싱", str(exc))
+    apis = manifest.get("NSPrivacyAccessedAPITypes", [])
+    userdefaults = [entry for entry in apis
+                    if entry.get("NSPrivacyAccessedAPIType") == "NSPrivacyAccessedAPICategoryUserDefaults"]
+    check("PrivacyInfo에 UserDefaults 사유", bool(userdefaults)
+          and "CA92.1" in (userdefaults[0].get("NSPrivacyAccessedAPITypeReasons") or []), str(apis))
+    check("PrivacyInfo 추적 없음", manifest.get("NSPrivacyTracking") is False)
+    check("PrivacyInfo 수집 데이터 없음", manifest.get("NSPrivacyCollectedDataTypes") == [])
+
+if isinstance(project, dict):
+    privacy_settings = project.get("targets", {}).get("LittleAcornForest", {}).get("info", {}).get("properties", {})
+    check("ITSAppUsesNonExemptEncryption = false",
+          privacy_settings.get("ITSAppUsesNonExemptEncryption") is False,
+          str(privacy_settings.get("ITSAppUsesNonExemptEncryption")))
+
 
 
 # ---------------------------------------------------------------------------

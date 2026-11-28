@@ -18,6 +18,11 @@ struct NeighboursView: View {
                         if !store.ownsGreenhouse {
                             lockedNeighboursCard
                         }
+                        if store.isMidnightZoneOpen {
+                            midnightGuestCard
+                        } else {
+                            lockedMidnightCard
+                        }
                     }
                     .padding(.horizontal, 18)
                     .padding(.bottom, 24)
@@ -53,6 +58,49 @@ struct NeighboursView: View {
                 store.openStore()
             }
             .buttonStyle(QuietButtonStyle(tint: ForestPalette.terracotta))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .storybookCard()
+        .opacity(0.9)
+    }
+
+    private var midnightGuestCard: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Image(systemName: "moon.haze.fill")
+                    .font(.system(size: 10))
+                    .foregroundStyle(ForestPalette.moonflake)
+                Text("심야 구역 · 달나방 등불다리")
+                    .font(.story(14, weight: .semibold))
+                    .foregroundStyle(ForestPalette.ink)
+            }
+            Text("이야기가 끝난 뒤에 놓인 다리. 달래와 모루가 난간에 앉아 기다립니다. 두 손님의 특별 의뢰도 그쪽에서 열립니다.")
+                .font(.story(12))
+                .foregroundStyle(ForestPalette.inkSoft)
+                .fixedSize(horizontal: false, vertical: true)
+            Button("다리 위로 걸어가기") {
+                store.openMidnightWelcome()
+            }
+            .buttonStyle(QuietButtonStyle(tint: ForestPalette.sage))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .storybookCard()
+    }
+
+    private var lockedMidnightCard: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 10))
+                    .foregroundStyle(ForestPalette.inkSoft)
+                Text("아직 만나지 못한 손님 2명")
+                    .font(.story(14, weight: .semibold))
+                    .foregroundStyle(ForestPalette.inkSoft)
+            }
+            Text("이야기를 끝까지 걸으면 심야 구역에 다리가 놓이고, 종달새 달래와 두더지 모루가 찾아옵니다.")
+                .font(.story(12))
+                .foregroundStyle(ForestPalette.inkSoft)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .storybookCard()
@@ -120,6 +168,22 @@ struct NeighboursView: View {
                 .foregroundStyle(ForestPalette.inkSoft)
 
             HStack(alignment: .top, spacing: 8) {
+                Image(systemName: "quote.opening")
+                    .font(.system(size: 10))
+                    .foregroundStyle(character.tint)
+                Text(store.affinityLine(for: character))
+                    .font(.story(12))
+                    .italic()
+                    .foregroundStyle(ForestPalette.ink)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.vertical, 1)
+
+            if let request = store.request(for: character) {
+                requestRow(request)
+            }
+
+            HStack(alignment: .top, spacing: 8) {
                 Image(systemName: "sparkles")
                     .font(.system(size: 11))
                     .foregroundStyle(ForestPalette.honey)
@@ -148,7 +212,7 @@ struct NeighboursView: View {
                 .disabled(store.giftableRecipes().isEmpty)
                 .opacity(store.giftableRecipes().isEmpty ? 0.45 : 1)
 
-                if character.isExpansionCharacter {
+                if character.isExpansionCharacter || character.isVisitorCharacter {
                     Button {
                         store.openDialogue(with: character)
                     } label: {
@@ -157,15 +221,53 @@ struct NeighboursView: View {
                     .buttonStyle(QuietButtonStyle(tint: ForestPalette.sage))
                 }
                 Spacer()
-                if character.isExpansionCharacter {
-                    Text("온실지기")
-                        .font(.label(9))
-                        .foregroundStyle(ForestPalette.moonflake)
-                }
+                Text(character.roleLabel)
+                    .font(.label(9))
+                    .foregroundStyle(character.tint)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .storybookCard()
+    }
+
+    /// 이웃의 특별 의뢰 한 장.
+    private func requestRow(_ request: SpecialRequest) -> some View {
+        let blocked = store.requestBlockReason(request)
+        return VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 6) {
+                Image(systemName: "checklist")
+                    .font(.system(size: 10))
+                    .foregroundStyle(ForestPalette.terracotta)
+                Text("특별 의뢰 · \(request.title)")
+                    .font(.label(10))
+                    .foregroundStyle(ForestPalette.terracotta)
+                Spacer()
+            }
+            Text(request.note)
+                .font(.story(12))
+                .foregroundStyle(ForestPalette.ink)
+                .fixedSize(horizontal: false, vertical: true)
+            Text("\(request.recipeName) 한 접시 · 보상 \(request.rewardLine)")
+                .font(.label(9))
+                .foregroundStyle(ForestPalette.inkSoft)
+            if let blocked {
+                Text(blocked)
+                    .font(.label(9))
+                    .foregroundStyle(ForestPalette.inkSoft)
+            } else {
+                Button {
+                    store.deliverRequest(request.id)
+                } label: {
+                    Text("의뢰 건네기")
+                }
+                .buttonStyle(QuietButtonStyle(tint: ForestPalette.terracotta))
+            }
+        }
+        .padding(9)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(ForestPalette.parchmentDeep.opacity(0.45))
+        )
     }
 
     private func tasteLine(for character: CharacterID, knowsTaste: Bool) -> String {

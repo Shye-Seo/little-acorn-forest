@@ -735,7 +735,7 @@ final class GameStore: ObservableObject {
     var visibleCharacters: [CharacterID] { engine.visibleCharacters }
 
     func openDialogue(with character: CharacterID) {
-        if character.isExpansionCharacter {
+        if character.isExpansionCharacter || character.isVisitorCharacter {
             guard let outcome = engine.talk(to: character) else {
                 showToast(engine.lastMessage)
                 return
@@ -747,6 +747,45 @@ final class GameStore: ObservableObject {
         }
         bump()
     }
+
+    // MARK: - 심야 구역과 특별 의뢰
+
+    var isMidnightZoneOpen: Bool { engine.isMidnightZoneOpen }
+
+    func openMidnightWelcome() {
+        if let outcome = engine.midnightWelcome() {
+            dialogue = outcome
+        } else {
+            showToast(engine.lastMessage)
+        }
+        bump()
+    }
+
+    /// 지금 사이에 어울리는 이웃의 한마디.
+    func affinityLine(for character: CharacterID) -> String {
+        engine.affinityLine(for: character)
+    }
+
+    var availableRequests: [SpecialRequest] { engine.availableRequests }
+    var completedRequests: [SpecialRequest] { engine.completedRequests }
+
+    func request(for character: CharacterID) -> SpecialRequest? {
+        engine.request(for: character)
+    }
+
+    func requestBlockReason(_ request: SpecialRequest) -> String? {
+        engine.requestBlockReason(request)
+    }
+
+    func deliverRequest(_ requestID: String) {
+        let outcome = engine.deliverRequest(requestID)
+        if outcome.succeeded { Haptics.success() } else { Haptics.warning() }
+        showToast(outcome.message)
+        bump()
+    }
+
+    var codexLine: String { engine.codexLine }
+    var unlockedCodexTiers: [CodexMastery.Tier] { engine.unlockedCodexTiers }
 
     func openGreenhouseWelcome() {
         if let outcome = engine.greenhouseWelcome() {

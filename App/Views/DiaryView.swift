@@ -10,6 +10,7 @@ struct DiaryView: View {
         VStack(spacing: 8) {
             header
             kindPicker
+            codexRow
             ScrollView(showsIndicators: false) {
                 LazyVStack(spacing: 10) {
                     ForEach(entries) { entry in
@@ -51,6 +52,29 @@ struct DiaryView: View {
                 .frame(width: 90)
         }
         .padding(.horizontal, 16)
+    }
+
+    /// 수첩을 얼마나 채웠는지와 다음 마스터리 보상을 보여 준다.
+    private var codexRow: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "rosette")
+                .font(.system(size: 11))
+                .foregroundStyle(ForestPalette.honey)
+            Text(store.codexLine)
+                .font(.label(10))
+                .foregroundStyle(ForestPalette.inkSoft)
+            Spacer()
+            if let next = CodexMastery.nextTier(forRecipeCount: store.state.cookedRecipeCount) {
+                Text(next.title)
+                    .font(.label(9))
+                    .foregroundStyle(ForestPalette.inkSoft.opacity(0.7))
+            } else {
+                Text("수첩 완성")
+                    .font(.label(9))
+                    .foregroundStyle(ForestPalette.terracotta)
+            }
+        }
+        .padding(.horizontal, 18)
     }
 
     private var kindPicker: some View {

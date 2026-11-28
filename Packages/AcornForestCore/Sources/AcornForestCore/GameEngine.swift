@@ -480,6 +480,7 @@ public final class GameEngine {
 
     public func isLocationUnlocked(_ location: ForestLocation) -> Bool {
         if let pack = location.requiredPack, !state.owns(pack) { return false }
+        if location.requiresStoryComplete && !state.isStoryComplete { return false }
         if location.requiresFullMoon { return isMoonlitGardenOpen }
         return state.status(of: location.unlockChapter) != .locked
     }
@@ -488,6 +489,9 @@ public final class GameEngine {
     public func lockMessage(for location: ForestLocation) -> String {
         if let pack = location.requiredPack, !state.owns(pack) {
             return "\(location.title)은(는) 「\(pack.displayName)」에서 열려요."
+        }
+        if location.requiresStoryComplete && !state.isStoryComplete {
+            return "\(location.title)은 심야에만 길이 열려요. 이야기를 끝까지 걸은 뒤에 다시 와 주세요."
         }
         if location.requiresFullMoon {
             return MoonGarden.closedMessage(daysUntilFullMoon: daysUntilFullMoon)
@@ -509,6 +513,8 @@ public final class GameEngine {
                 return state.owns(.greenhouse)
             case .moonlitGarden:
                 return state.status(of: MoonGarden.requiredChapter) != .locked
+            case .mothLanternBridge, .starSaltSpring:
+                return state.isStoryComplete
             default:
                 return true
             }
@@ -626,7 +632,8 @@ public final class GameEngine {
         RecipeBook.recipe(
             for: ingredients,
             unlockedSecretIDs: state.secretRecipes,
-            includesSeasonal: state.owns(.greenhouse)
+            includesSeasonal: state.owns(.greenhouse),
+            includesMidnight: state.isStoryComplete
         )
     }
 
@@ -730,6 +737,9 @@ public final class GameEngine {
             state.add(bonus, count: blessing.bonusCount)
         }
 
+        // 수첩을 채운 만큼 도감 마스터리 보상이 열린다.
+        let newCodexTiers = claimCodexMasteryTiers()
+
         cooking = nil
         simmer = nil
         simmerResult = nil
@@ -746,7 +756,8 @@ public final class GameEngine {
             let hint = RecipeBook.closestRecipe(
                 to: attempted,
                 unlockedSecretIDs: state.secretRecipes,
-                includesSeasonal: state.owns(.greenhouse)
+                includesSeasonal: state.owns(.greenhouse),
+                includesMidnight: state.isStoryComplete
             ).map { " ‘\($0.name)’에 가까운 조합이에요." } ?? ""
             message = "솥단지가 뭉근한 잼이 되었어요. 수첩의 레시피와 맞지 않았어요.\(hint)"
         }
@@ -760,6 +771,10 @@ public final class GameEngine {
 
         if blessing.hasEffect {
             message += " \(blessing.phase.emoji) \(blessing.title) — \(blessing.effectLine)"
+        }
+
+        for tier in newCodexTiers {
+            message += " 🏅 도감 마스터리 ‘\(tier.title)’ — \(tier.rewardLine)"
         }
 
         lastMessage = message
@@ -1251,8 +1266,10 @@ public final class GameEngine {
     }
 
     /// 온실지기와의 대화. 처음 끝까지 읽으면 호감도가 오른다.
+    /// 심야 손님(달래·모루)도 같은 방식으로 대화할 수 있다.
     @discardableResult
     public func talk(to character: CharacterID) -> DialogueOutcome? {
+        if character.isVisitorCharacter { return talkToVisitor(character) }
         guard character.isExpansionCharacter else { return nil }
         guard state.owns(.greenhouse) else {
             lastMessage = "\(character.name)을(를) 만나려면 「사계절 온실 확장팩」이 필요해요."
@@ -1280,6 +1297,182 @@ public final class GameEngine {
             isFirstTime: isFirst,
             message: gain > 0 ? "\(character.name)과(와) 이야기를 나눴어요. 호감도 +\(gain)" : scene.closingThought
         )
+    }
+
+    // MARK: - 심야 구역과 방문 손님
+
+    /// 심야 구역의 문이 열렸는지(이야기를 끝까지 걸었는지).
+    public var isMidnightZoneOpen: Bool {
+        state.isStoryComplete
+    }
+
+    /// 다리 위에서 처음 손님을 맞는 장면. 처음 한 번만 호감도를 준다.
+    public func midnightWelcome() -> DialogueOutcome? {
+        guard isMidnightZoneOpen else {
+            lastMessage = "심야 구역은 이야기를 끝까지 걸은 뒤에 열려요."
+            return nil
+        }
+        let isFirst = !state.hasFlag("midnight.opened")
+        var gain = 0
+        if isFirst {
+            state.setFlag("midnight.opened")
+            gain = MidnightGuests.affinityGain - 2
+            state.addAffinity(gain, to: .dallae)
+            state.addAffinity(gain, to: .moru)
+            _ = refreshDiaryMemories()
+            autoSave()
+        }
+        return DialogueOutcome(
+            scene: MidnightGuests.welcome,
+            gain: gain,
+            isFirstTime: isFirst,
+            message: isFirst ? "심야 구역의 다리가 놓였어요." : "다시 다리 위로."
+        )
+    }
+
+    @discardableResult
+    private func talkToVisitor(_ character: CharacterID) -> DialogueOutcome? {
+        guard isMidnightZoneOpen else {
+            lastMessage = "\(character.name)은(는) 심야 구역에서만 만날 수 있어요. 이야기를 끝까지 걸어 주세요."
+            return nil
+        }
+        let isFirst = !state.hasTalked(to: character)
+        guard let scene = isFirst
+            ? MidnightGuests.firstScene(for: character)
+            : MidnightGuests.closeScene(for: character) else {
+            return nil
+        }
+
+        var gain = 0
+        if isFirst {
+            gain = MidnightGuests.affinityGain
+            state.addAffinity(gain, to: character)
+            state.markTalked(to: character)
+            _ = refreshDiaryMemories()
+            autoSave()
+        }
+        return DialogueOutcome(
+            scene: scene,
+            gain: gain,
+            isFirstTime: isFirst,
+            message: gain > 0 ? "\(character.name)과(와) 이야기를 나눴어요. 호감도 +\(gain)" : scene.closingThought
+        )
+    }
+
+    /// 지금 사이에 어울리는 이웃의 한마디.
+    public func affinityLine(for character: CharacterID) -> String {
+        let line = AffinityDialogue.line(for: character, points: state.affinityPoints(for: character))
+        return line.isEmpty ? AffinityDialogue.fallback(for: character) : line
+    }
+
+    // MARK: - 특별 의뢰
+
+    /// 아직 마치지 않은 특별 의뢰 전체.
+    public var openRequests: [SpecialRequest] {
+        SpecialRequestBook.all.filter { !state.hasCompletedRequest($0.id) }
+    }
+
+    /// 마친 특별 의뢰 전체.
+    public var completedRequests: [SpecialRequest] {
+        SpecialRequestBook.all.filter { state.hasCompletedRequest($0.id) }
+    }
+
+    /// 지금 조건을 다 채워 열린 의뢰인지.
+    public func isRequestUnlocked(_ request: SpecialRequest) -> Bool {
+        if request.requiresStoryComplete && !state.isStoryComplete { return false }
+        if let pack = request.requiredPack, !state.owns(pack) { return false }
+        return state.affinityPoints(for: request.character) >= request.minimumAffinity.rawValue
+    }
+
+    /// 지금 열린 특별 의뢰 목록.
+    public var availableRequests: [SpecialRequest] {
+        openRequests.filter { isRequestUnlocked($0) }
+    }
+
+    /// 이웃 한 명의 특별 의뢰(마쳤는지와 상관없이).
+    public func request(for character: CharacterID) -> SpecialRequest? {
+        openRequests.first { $0.character == character }
+    }
+
+    /// 의뢰를 아직 못 하는 이유. 할 수 있으면 nil.
+    public func requestBlockReason(_ request: SpecialRequest) -> String? {
+        if state.hasCompletedRequest(request.id) { return "이미 마친 의뢰예요." }
+        if request.requiresStoryComplete && !state.isStoryComplete {
+            return "이야기를 끝까지 걸은 뒤에 열려요."
+        }
+        if let pack = request.requiredPack, !state.owns(pack) {
+            return "「\(pack.displayName)」에서 열려요."
+        }
+        if state.affinityPoints(for: request.character) < request.minimumAffinity.rawValue {
+            return "\(request.character.name)과(와) \(request.minimumAffinity.title)이 되어야 해요."
+        }
+        if state.servings(of: request.recipeID) == 0 {
+            return "\(request.recipeName)을(를) 먼저 담가 주세요."
+        }
+        return nil
+    }
+
+    /// 특별 의뢰에 잼 한 접시를 건넨다.
+    @discardableResult
+    public func deliverRequest(_ requestID: String) -> SpecialRequestOutcome {
+        guard let request = SpecialRequestBook.request(id: requestID) else {
+            return SpecialRequestOutcome(succeeded: false, request: nil, message: "그런 의뢰가 없어요.")
+        }
+        if let reason = requestBlockReason(request) {
+            lastMessage = reason
+            return SpecialRequestOutcome(succeeded: false, request: request, message: reason)
+        }
+        guard state.consumeServing(recipeID: request.recipeID) else {
+            let message = "\(request.recipeName)이(가) 모자라요."
+            lastMessage = message
+            return SpecialRequestOutcome(succeeded: false, request: request, message: message)
+        }
+
+        state.completeRequest(request.id)
+        let before = state.affinityPoints(for: request.character)
+        state.addAffinity(AffinitySystem.likedPoints, to: request.character)
+        let gained = state.affinityPoints(for: request.character) - before
+        state.add(request.reward)
+        state.fireflyDust += max(0, request.fireflyDust)
+        _ = refreshDiaryMemories()
+        autoSave()
+
+        var message = "\(request.character.name)의 특별 의뢰 ‘\(request.title)’을(를) 마쳤어요. \(request.thanks)"
+        if gained > 0 { message += " · 호감도 +\(gained)" }
+        if !request.reward.isEmpty { message += " · \(request.reward.map(\.label).joined(separator: " · "))" }
+        lastMessage = message
+        return SpecialRequestOutcome(
+            succeeded: true,
+            request: request,
+            message: message,
+            affinityGain: gained,
+            gained: request.reward
+        )
+    }
+
+    // MARK: - 도감 마스터리
+
+    public var codexLine: String {
+        CodexMastery.line(forRecipeCount: state.cookedRecipeCount)
+    }
+
+    public var unlockedCodexTiers: [CodexMastery.Tier] {
+        CodexMastery.unlockedTiers(forRecipeCount: state.cookedRecipeCount)
+    }
+
+    /// 문턱을 넘은 도감 마스터리 보상을 받고, 이번에 새로 받은 단계를 돌려준다.
+    @discardableResult
+    public func claimCodexMasteryTiers() -> [CodexMastery.Tier] {
+        let newly = CodexMastery.newlyUnlocked(
+            forRecipeCount: state.cookedRecipeCount,
+            alreadyClaimed: state.claimedCodexTiers
+        )
+        for tier in newly {
+            guard state.claimCodexTier(tier.id) else { continue }
+            state.add(tier.reward)
+            state.fireflyDust += max(0, tier.fireflyDust)
+        }
+        return newly
     }
 
     // MARK: - 일기장

@@ -40,7 +40,7 @@ public enum DiaryKind: String, Codable, CaseIterable, Sendable, Identifiable {
 }
 
 /// 일기장 목차와 해금 규칙. 대부분은 요리·선물·챕터 완료로 자연스럽게 채워진다.
-/// 기본 21칸(본편)과, 확장팩으로 늘어나는 기록을 나누어 둔다.
+/// 기본 칸(본편)과, 확장팩·심야 구역으로 늘어나는 기록을 나누어 둔다.
 public enum ForestDiary {
     public static let festivalEntryID = "festival.starlight"
 
@@ -77,15 +77,15 @@ public enum ForestDiary {
         return list
     }()
 
-    /// 확장 기록. 사계절 온실 레시피·비밀 레시피·온실지기 두 명의 기억.
+    /// 확장 기록. 사계절 온실 레시피·심야 구역 레시피·비밀 레시피와, 온실지기·심야 손님의 기억.
     public static let expandedEntries: [DiaryEntry] = {
         var list: [DiaryEntry] = []
 
-        for recipe in GreenhouseRecipes.all + SecretRecipeBook.all {
+        for recipe in GreenhouseRecipes.all + MidnightRecipes.all + SecretRecipeBook.all {
             list.append(recipeEntry(for: recipe))
         }
 
-        for character in CharacterID.expansionNeighbours {
+        for character in CharacterID.expansionNeighbours + CharacterID.visitorNeighbours {
             list.append(contentsOf: memoryEntries(for: character))
         }
 
@@ -125,8 +125,14 @@ public enum ForestDiary {
     public static var expandedCount: Int { expandedEntries.count }
 
     /// 호감도 단계가 오르면 열리는 기억의 문턱.
+    /// 인사하는 사이에 첫 기억, 단짝에 소원, 가족에 마지막 한 줄이 열린다.
     public static func memoryTierUnlocked(by level: AffinityLevel) -> Int {
-        level >= .close ? 2 : (level >= .greeting ? 1 : 0)
+        switch level {
+        case .shy: return 0
+        case .greeting: return 1
+        case .close: return 2
+        case .family: return 3
+        }
     }
 
     /// 이웃의 현재 호감도에 따라 열려 있어야 할 기억 id 목록.
@@ -161,6 +167,13 @@ public enum ForestDiary {
                 id: memoryEntryID(for: character, tier: 2),
                 title: "\(character.name)의 기억 · 소원",
                 body: "\(character.name)이 별빛 축제에 걸고 있는 소원은 \(character.wish)이다.\n아직 말로는 다 하지 못했지만, 우리는 조금씩 가까워지고 있다.",
+                kind: .memory,
+                relatedID: character.rawValue
+            ),
+            DiaryEntry(
+                id: memoryEntryID(for: character, tier: 3),
+                title: "\(character.name)의 기억 · 가족",
+                body: character.familyMemory,
                 kind: .memory,
                 relatedID: character.rawValue
             )

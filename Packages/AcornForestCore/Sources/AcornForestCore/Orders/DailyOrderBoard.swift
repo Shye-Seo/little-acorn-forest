@@ -267,11 +267,13 @@ public enum DailyOrderBoard {
 
     // MARK: - 주문 만들기
 
-    /// 오늘 주문을 남길 이웃. 인사하는 사이부터, 확장 이웃은 온실을 가진 뒤에만.
+    /// 오늘 주문을 남길 이웃. 인사하는 사이부터, 확장 이웃은 온실을 가진 뒤에만,
+    /// 심야 손님은 이야기를 마친 뒤에만 들어온다.
     public static func eligibleCharacters(in state: GameState) -> [CharacterID] {
         CharacterID.allCases.filter { character in
             guard state.affinityPoints(for: character) >= AffinityLevel.greeting.rawValue else { return false }
             if character.isExpansionCharacter && !state.owns(.greenhouse) { return false }
+            if character.isVisitorCharacter && !state.isStoryComplete { return false }
             return true
         }
     }
@@ -408,6 +410,10 @@ public enum DailyOrderBoard {
             return "“유리 지붕 아래에서 계절을 세다 보면, 입안에도 계절이 하나 있었으면 해. 오늘은 그런 잼.”"
         case .coco:
             return "“연못가에 앉아서 먹을 거야. 조약돌 굴리다 손이 심심하면 잼 한 숟갈 떠서. 오늘은 그런 날.”"
+        case .dallae:
+            return "“오늘은 노래 중간에 배가 꼬였어. 달콤하지만 밤처럼 조용한 맛이면 좋겠어. 마지막 소절까지 부를 수 있게.”"
+        case .moru:
+            return "“길 떠나는 손님 몫으로 하나 부탁합니다. 오래 들고 가도 상하지 않으면서, 맑은 잼이면 좋겠습니다.”"
         }
     }
 

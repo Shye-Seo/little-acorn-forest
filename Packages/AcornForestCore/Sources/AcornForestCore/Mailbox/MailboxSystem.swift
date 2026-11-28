@@ -14,11 +14,13 @@ public enum MailboxSystem {
     /// 편지가 쪽지(비밀 레시피)일 확률.
     public static let noteChance = 0.32
 
-    /// 오늘 편지를 남길 수 있는 이웃. 확장 이웃은 온실을 가진 뒤에만 온다.
+    /// 오늘 편지를 남길 수 있는 이웃. 확장 이웃은 온실을 가진 뒤에만,
+    /// 심야 손님은 이야기를 마친 뒤에만 온다.
     public static func eligibleSenders(in state: GameState) -> [CharacterID] {
         CharacterID.allCases.filter { character in
             guard state.affinityPoints(for: character) >= affinityThreshold else { return false }
             if character.isExpansionCharacter && !state.owns(.greenhouse) { return false }
+            if character.isVisitorCharacter && !state.isStoryComplete { return false }
             return true
         }
     }

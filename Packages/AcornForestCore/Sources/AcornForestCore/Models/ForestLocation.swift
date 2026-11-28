@@ -1,6 +1,8 @@
 import Foundation
 
 /// 숲 지도에서 움직일 수 있는 장소.
+/// 기본 다섯 곳에 보름달 정원·사계절 온실이 더해지고,
+/// 이야기를 끝낸 뒤에는 심야 구역 두 곳(달나방 등불다리·별소금 샘)이 열린다.
 public enum ForestLocation: String, CaseIterable, Codable, Identifiable, Sendable {
     case cabinKitchen
     case berryPatch
@@ -9,6 +11,8 @@ public enum ForestLocation: String, CaseIterable, Codable, Identifiable, Sendabl
     case festivalGlade
     case moonlitGarden
     case greenhouse
+    case mothLanternBridge
+    case starSaltSpring
 
     public var id: String { rawValue }
 
@@ -21,6 +25,8 @@ public enum ForestLocation: String, CaseIterable, Codable, Identifiable, Sendabl
         case .festivalGlade: return "별빛 축제터"
         case .moonlitGarden: return "달빛 비밀 정원"
         case .greenhouse: return "사계절 온실"
+        case .mothLanternBridge: return "달나방 등불다리"
+        case .starSaltSpring: return "별소금 샘"
         }
     }
 
@@ -40,6 +46,10 @@ public enum ForestLocation: String, CaseIterable, Codable, Identifiable, Sendabl
             return "보름달이 뜨는 밤에만 담장 사이로 길이 열리는 정원. 잎맥을 따라 월광 이슬이 흐른다."
         case .greenhouse:
             return "에필로그 뒤에야 열리는 유리 지붕의 온실. 봄·여름·가을·겨울이 네 칸에 나란히 자란다."
+        case .mothLanternBridge:
+            return "이야기가 끝난 밤에만 놓이는 작은 나무다리. 난간마다 달나방이 앉아 등불처럼 빛난다."
+        case .starSaltSpring:
+            return "다리 끝에서 이어지는 샘. 밤새 별소금 결정이 자라고, 혜성이 지나간 날엔 깃털이 걸린다."
         }
     }
 
@@ -61,7 +71,31 @@ public enum ForestLocation: String, CaseIterable, Codable, Identifiable, Sendabl
         case .moonlitGarden:
             return [GatherDrop(.dewberry, 34), GatherDrop(.starMossShroom, 34), GatherDrop(.moonflakeSpice, 22), GatherDrop(.moonlitDew, 10)]
         case .greenhouse:
-            return [GatherDrop(.dewberry, 68), GatherDrop(.cherryHoney, 11), GatherDrop(.mapleSap, 11), GatherDrop(.snowBlossom, 10)]
+            return [
+                GatherDrop(.dewberry, 68),
+                GatherDrop(.cherryHoney, 7),
+                GatherDrop(.mapleSap, 6),
+                GatherDrop(.emberQuince, 9),
+                GatherDrop(.snowBlossom, 6),
+                GatherDrop(.frostFernSpore, 4)
+            ]
+        case .mothLanternBridge:
+            return [
+                GatherDrop(.nightBellFlower, 40),
+                GatherDrop(.dewberry, 28),
+                GatherDrop(.mothDustSugar, 16),
+                GatherDrop(.moonflakeSpice, 6),
+                GatherDrop(.cometFeather, 10)
+            ]
+        case .starSaltSpring:
+            return [
+                GatherDrop(.nightBellFlower, 26),
+                GatherDrop(.starMossShroom, 22),
+                GatherDrop(.dewberry, 20),
+                GatherDrop(.starSaltCrystal, 16),
+                GatherDrop(.moonflakeSpice, 6),
+                GatherDrop(.cometFeather, 10)
+            ]
         }
     }
 
@@ -80,6 +114,8 @@ public enum ForestLocation: String, CaseIterable, Codable, Identifiable, Sendabl
         case .festivalGlade: return 1.20...1.65
         case .moonlitGarden: return 1.30...1.75
         case .greenhouse: return 1.30...1.80
+        case .mothLanternBridge: return 1.25...1.70
+        case .starSaltSpring: return 1.35...1.85
         }
     }
 
@@ -93,6 +129,8 @@ public enum ForestLocation: String, CaseIterable, Codable, Identifiable, Sendabl
         case .festivalGlade: return 1.6...2.1
         case .moonlitGarden: return 1.9...2.4
         case .greenhouse: return 1.9...2.5
+        case .mothLanternBridge: return 1.7...2.2
+        case .starSaltSpring: return 1.9...2.4
         }
     }
 
@@ -101,6 +139,7 @@ public enum ForestLocation: String, CaseIterable, Codable, Identifiable, Sendabl
         case .cabinKitchen, .festivalGlade: return true
         case .berryPatch, .fireflyPond, .owlLibrary: return true
         case .moonlitGarden, .greenhouse: return true
+        case .mothLanternBridge, .starSaltSpring: return true
         }
     }
 
@@ -112,6 +151,7 @@ public enum ForestLocation: String, CaseIterable, Codable, Identifiable, Sendabl
         case .festivalGlade: return .epilogue
         case .moonlitGarden: return .chapterOne
         case .greenhouse: return .epilogue
+        case .mothLanternBridge, .starSaltSpring: return .epilogue
         }
     }
 
@@ -119,7 +159,8 @@ public enum ForestLocation: String, CaseIterable, Codable, Identifiable, Sendabl
     public var requiredPack: ContentPack? {
         switch self {
         case .greenhouse: return .greenhouse
-        case .cabinKitchen, .berryPatch, .fireflyPond, .owlLibrary, .festivalGlade, .moonlitGarden:
+        case .cabinKitchen, .berryPatch, .fireflyPond, .owlLibrary, .festivalGlade,
+             .moonlitGarden, .mothLanternBridge, .starSaltSpring:
             return nil
         }
     }
@@ -128,6 +169,19 @@ public enum ForestLocation: String, CaseIterable, Codable, Identifiable, Sendabl
     public var requiresFullMoon: Bool {
         self == .moonlitGarden
     }
+
+    /// 이야기를 끝까지 걸은 뒤에만 길이 열리는 심야 구역인지.
+    public var requiresStoryComplete: Bool {
+        switch self {
+        case .mothLanternBridge, .starSaltSpring: return true
+        case .cabinKitchen, .berryPatch, .fireflyPond, .owlLibrary, .festivalGlade,
+             .moonlitGarden, .greenhouse:
+            return false
+        }
+    }
+
+    /// 심야 구역에 속한 장소인지.
+    public var isMidnightZone: Bool { requiresStoryComplete }
 
     /// 지도 위에서의 대략적인 위치(0~1 비율). UI가 그대로 쓴다.
     public var mapAnchor: (x: Double, y: Double) {
@@ -139,6 +193,8 @@ public enum ForestLocation: String, CaseIterable, Codable, Identifiable, Sendabl
         case .festivalGlade: return (0.50, 0.82)
         case .moonlitGarden: return (0.13, 0.52)
         case .greenhouse: return (0.86, 0.82)
+        case .mothLanternBridge: return (0.20, 0.88)
+        case .starSaltSpring: return (0.72, 0.92)
         }
     }
 }

@@ -41,11 +41,19 @@ final class BalanceTests: XCTestCase {
     }
 
     func testDropTablesOnlyHoldIngredientsThatGrowThere() {
+        // 심야 구역 두 곳(달나방 등불다리·별소금 샘)은 같은 구역이라 재료를 나눠 쓴다.
+        let midnight = Set(ForestLocation.allCases.filter(\.isMidnightZone))
         for location in ForestLocation.allCases {
             for drop in location.dropTable {
-                if let source = drop.ingredient.sourceLocation {
-                    XCTAssertEqual(source, location, "\(drop.ingredient.title)은 \(location.title)에서 나오면 안 된다")
-                }
+                guard let source = drop.ingredient.sourceLocation else { continue }
+                let allowed: Set<ForestLocation> = source.isMidnightZone ? midnight : [source]
+                XCTAssertTrue(allowed.contains(location), "\(drop.ingredient.title)은 \(location.title)에서 나오면 안 된다")
+            }
+        }
+        // 심야 재료는 본편·온실 채집터에서 나오지 않는다.
+        for location in ForestLocation.allCases where !location.isMidnightZone {
+            for drop in location.dropTable {
+                XCTAssertFalse(drop.ingredient.isMidnightIngredient, "\(drop.ingredient.title)이 \(location.title)에 있다")
             }
         }
     }

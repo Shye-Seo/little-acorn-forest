@@ -456,6 +456,8 @@ extension ForestLocation {
         case .festivalGlade: return "sparkles"
         case .moonlitGarden: return "moon.stars.fill"
         case .greenhouse: return "leaf.circle.fill"
+        case .mothLanternBridge: return "moon.haze.fill"
+        case .starSaltSpring: return "sparkle"
         }
     }
 }

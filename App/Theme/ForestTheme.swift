@@ -63,6 +63,12 @@ extension Ingredient {
         case .cherryHoney: return ForestPalette.berry
         case .mapleSap: return ForestPalette.chestnut
         case .snowBlossom: return ForestPalette.dew
+        case .nightBellFlower: return ForestPalette.sageDeep
+        case .mothDustSugar: return ForestPalette.moonflake
+        case .starSaltCrystal: return ForestPalette.dew
+        case .cometFeather: return ForestPalette.moonlight
+        case .emberQuince: return ForestPalette.terracotta
+        case .frostFernSpore: return ForestPalette.sage
         }
     }
 }
@@ -76,6 +82,8 @@ extension CharacterID {
         case .rubi: return ForestPalette.terracotta
         case .luna: return ForestPalette.moonflake
         case .coco: return ForestPalette.dew
+        case .dallae: return ForestPalette.moonlight
+        case .moru: return ForestPalette.chestnut
         }
     }
 }

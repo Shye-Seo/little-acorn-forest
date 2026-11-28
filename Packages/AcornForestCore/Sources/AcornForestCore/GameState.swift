@@ -147,6 +147,13 @@ public struct GameState: Codable, Hashable, Sendable {
     /// 열린 선반 장식(OrderTrophy raw value).
     public var orderTrophies: [String]
 
+    // MARK: 심야 구역·도감 마스터리
+
+    /// 마친 특별 의뢰 id.
+    public var completedRequests: [String]
+    /// 이미 보상을 받은 도감 마스터리 단계 id.
+    public var claimedCodexTiers: [String]
+
     public init(startedAt: Date = Date()) {
         self.formatVersion = GameState.currentFormatVersion
         self.chapters = StoryChapter.ordered.map {
@@ -184,6 +191,8 @@ public struct GameState: Codable, Hashable, Sendable {
         self.bestOrderStreak = 0
         self.orders = []
         self.orderTrophies = []
+        self.completedRequests = []
+        self.claimedCodexTiers = []
     }
 
     // MARK: - 구버전 저장 파일 호환
@@ -196,6 +205,7 @@ public struct GameState: Codable, Hashable, Sendable {
         case debugMoonOverride, debugDayShift
         case moonlightEnergy, energyDay, focusRecoveries, letterRecoveries, giftDay, giftCounts
         case orderPoints, orderStreak, bestOrderStreak, orders, orderTrophies
+        case completedRequests, claimedCodexTiers
     }
 
     /// 확장 기능이 생기기 전의 저장 파일에도 열리도록, 새 필드는 없으면 기본값으로 채운다.
@@ -236,6 +246,8 @@ public struct GameState: Codable, Hashable, Sendable {
         bestOrderStreak = try container.decodeIfPresent(Int.self, forKey: .bestOrderStreak) ?? 0
         orders = try container.decodeIfPresent([OrderRecord].self, forKey: .orders) ?? []
         orderTrophies = try container.decodeIfPresent([String].self, forKey: .orderTrophies) ?? []
+        completedRequests = try container.decodeIfPresent([String].self, forKey: .completedRequests) ?? []
+        claimedCodexTiers = try container.decodeIfPresent([String].self, forKey: .claimedCodexTiers) ?? []
     }
 
     // MARK: - 챕터
@@ -358,10 +370,12 @@ public struct GameState: Codable, Hashable, Sendable {
         affinity.filter { !$0.character.isExpansionCharacter }
     }
 
-    /// 지금 화면에 보여 줄 이웃. 온실 이웃은 확장팩을 가진 뒤에만 등장한다.
+    /// 지금 화면에 보여 줄 이웃. 온실 이웃은 확장팩을 가진 뒤에만, 심야 손님은 이야기를 마친 뒤에만 등장한다.
     public var visibleCharacters: [CharacterID] {
         CharacterID.allCases.filter { character in
-            !character.isExpansionCharacter || owns(.greenhouse)
+            if character.isExpansionCharacter { return owns(.greenhouse) }
+            if character.isVisitorCharacter { return isStoryComplete }
+            return true
         }
     }
 
@@ -730,5 +744,41 @@ public struct GameState: Codable, Hashable, Sendable {
         orderTrophies = Array(Set(orderTrophies)).filter { id in
             OrderTrophy.allCases.contains { $0.rawValue == id }
         }.sorted()
+        completedRequests = Array(Set(completedRequests))
+            .filter { SpecialRequestBook.request(id: $0) != nil }
+            .sorted()
+        claimedCodexTiers = Array(Set(claimedCodexTiers))
+            .filter { id in CodexMastery.all.contains { $0.id == id } }
+            .sorted()
+    }
+
+    // MARK: - 특별 의뢰와 도감 마스터리
+
+    /// 마친 특별 의뢰인지.
+    public func hasCompletedRequest(_ id: String) -> Bool {
+        completedRequests.contains(id)
+    }
+
+    @discardableResult
+    public mutating func completeRequest(_ id: String) -> Bool {
+        guard !completedRequests.contains(id) else { return false }
+        completedRequests.append(id)
+        return true
+    }
+
+    /// 이 도감 마스터리 단계의 보상을 이미 받았는지.
+    public func hasClaimedCodexTier(_ id: String) -> Bool {
+        claimedCodexTiers.contains(id)
+    }
+
+    @discardableResult
+    public mutating func claimCodexTier(_ id: String) -> Bool {
+        guard !claimedCodexTiers.contains(id) else { return false }
+        claimedCodexTiers.append(id)
+        return true
+    }
+
+    public var codexLine: String {
+        CodexMastery.line(forRecipeCount: cookedRecipeCount)
     }
 }

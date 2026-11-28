@@ -141,7 +141,7 @@ final class ExpansionPersistenceTests: XCTestCase {
 
     func testExpandedDiaryProgressIsCountedSeparately() {
         var state = GameEngine.freshState()
-        XCTAssertEqual(state.diaryProgress.total, 21)
+        XCTAssertEqual(state.diaryProgress.total, 26)
         XCTAssertEqual(state.expandedDiaryProgress.total, ForestDiary.expandedCount)
         XCTAssertGreaterThan(state.expandedDiaryProgress.total, 0)
         state.unlockDiary(ForestDiary.recipeEntryID(for: GreenhouseRecipes.springID))
